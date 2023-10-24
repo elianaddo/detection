@@ -1,2 +1,2 @@
-def api():
+def hello():
     return "Hello Meta!"
