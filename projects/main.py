@@ -22,7 +22,7 @@ def execDet2():
     print(detectron2hello())
     print("Exec time meta: %s seconds " % (time.time() - start_time))
 
-def ssdMobile()
+def ssdMobile():
     start_time = time.time()
     print(ssdhello())
     print("Exec time ssd: %s seconds " % (time.time() - start_time))
