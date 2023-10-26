@@ -1,3 +1,5 @@
+import os
+import subprocess
 import sys
 import cv2
 import argparse
@@ -20,7 +22,7 @@ def parse(argv):
                         help="input video file")
     return parser.parse_args(argv)
 
-def execDet2(videopath):
+def _execDet2(videopath):
     start_time = time.time()
     print(detectron2hello())
 
@@ -48,7 +50,7 @@ def execDet2(videopath):
     cv2.destroyAllWindows()
     print("Exec time meta: %s seconds " % (time.time() - start_time))
 
-def ssdMobile(videopath):
+def _execSSDMobile(videopath):
     start_time = time.time()
     print(ssdhello())
 
@@ -77,11 +79,43 @@ def ssdMobile(videopath):
     cv2.destroyAllWindows()
     print("Exec time ssd: %s seconds " % (time.time() - start_time))
 
-#def yolo():
-#    start_time = time.time()
-#    print(yolohello())
-#    print("Exec time yolo: %s seconds " % (time.time() - start_time))
+def _yolo():
+    start_time = time.time()
+    print("Exec time yolo: %s seconds " % (time.time() - start_time))
 
+def execDet2(video_file):
+    start_time = time.time()
+    delta = time.time() - start_time
+    print("Exec time det: %s seconds " % round(delta, 4))
+
+def execSSDMobile(video_file):
+    start_time = time.time()
+    cwd = os.getcwd()
+    pathToGo = os.path.join(cwd, "ssd_mobilenet")
+    print(video_file)
+    print(pathToGo)
+    os.chdir(pathToGo)
+    try:
+         subprocess.run(
+             [
+                 "python",
+                 "people_counter.py",
+                 "--prototxt", "detector/MobileNetSSD_deploy.prototxt",
+                 "--model", "detector/MobileNetSSD_deploy.caffemodel",
+                 "--input", video_file
+             ])
+    except:
+        print("ocorreu um erro")
+    finally:
+        os.chdir(cwd)
+    #python people_counter.py --prototxt detector/MobileNetSSD_deploy.prototxt --model detector/MobileNetSSD_deploy.caffemodel --input utils/data/tests/test_1.mp4
+    delta = time.time() - start_time
+    print("Exec time SSD: %s seconds " % round(delta, 4))
+
+def execYolo(video_file):
+    start_time = time.time()
+    delta = time.time() - start_time
+    print("Exec time yoloV8: %s seconds " % round(delta, 4))
 
 #verifica se o video é passado - verifca na shell
 def main(argv=None):
@@ -94,9 +128,15 @@ def main(argv=None):
         print(f"Please specify a file with --input")
         return 1
 
-    print(video_file)
-    execDet2(video_file)
-    ssdMobile(video_file)
+    if not os.path.exists(video_file):
+        print("file does not exist")
+        return 1
+
+    real_path = os.path.realpath(video_file)
+
+    execDet2(real_path)
+    execSSDMobile(real_path)
+    execYolo(real_path)
     return 0
 
 #0=tudo ok 1=erro

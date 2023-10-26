@@ -113,10 +113,11 @@ class DetectionPredictor(BasePredictor):
         for x1,y1,x2,y2,conf,detclass in det.cpu().detach().numpy():
             dets_to_sort = np.vstack((dets_to_sort, 
                         np.array([x1, y1, x2, y2, conf, detclass])))
-        
+
+        print(dets_to_sort)
         tracked_dets = tracker.update(dets_to_sort)
         tracks =tracker.getTrackers()
-        
+
         for track in tracks:
             [cv2.line(im0, (int(track.centroidarr[i][0]),
                         int(track.centroidarr[i][1])), 
@@ -132,7 +133,6 @@ class DetectionPredictor(BasePredictor):
             identities = tracked_dets[:, 8]
             categories = tracked_dets[:, 4]
             draw_boxes(im0, bbox_xyxy, identities, categories, self.model.names)
-           
         gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
         
         return log_string

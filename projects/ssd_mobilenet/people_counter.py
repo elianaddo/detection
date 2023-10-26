@@ -167,7 +167,12 @@ def people_counter():
 			net.setInput(blob)
 			detections = net.forward()
 
+			ids = []
+			confid = []
+			boxes = []
+
 			# loop over the detections
+			#CONFIDENCE
 			for i in np.arange(0, detections.shape[2]):
 				# extract the confidence (i.e., probability) associated
 				# with the prediction
@@ -180,14 +185,20 @@ def people_counter():
 					# detections list
 					idx = int(detections[0, 0, i, 1])
 
+					#CLASSID
 					# if the class label is not a person, ignore it
 					if CLASSES[idx] != "person":
 						continue
 
 					# compute the (x, y)-coordinates of the bounding box
 					# for the object
+					#BOXXX
 					box = detections[0, 0, i, 3:7] * np.array([W, H, W, H])
 					(startX, startY, endX, endY) = box.astype("int")
+
+					ids.append(CLASSES[idx])
+					confid.append(confidence)
+					boxes.append(box)
 
 					# construct a dlib rectangle object from the bounding
 					# box coordinates and then start the dlib correlation
@@ -199,6 +210,7 @@ def people_counter():
 					# add the tracker to our list of trackers so we can
 					# utilize it during skip frames
 					trackers.append(tracker)
+			print(ids, confid, boxes)
 
 		# otherwise, we should utilize our object *trackers* rather than
 		# object *detectors* to obtain a higher frame processing throughput
@@ -310,6 +322,7 @@ def people_counter():
 		("Total people inside", ', '.join(map(str, total))),
 		]
 
+
 		# display the output
 		for (i, (k, v)) in enumerate(info_status):
 			text = "{}: {}".format(k, v)
@@ -351,6 +364,8 @@ def people_counter():
 	logger.info("Elapsed time: {:.2f}".format(fps.elapsed()))
 	logger.info("Approx. FPS: {:.2f}".format(fps.fps()))
 
+
+	#return confidence
 	# release the camera device/resource (issue 15)
 	if config["Thread"]:
 		vs.release()

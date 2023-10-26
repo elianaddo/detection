@@ -94,6 +94,10 @@ class VisualizationDemo:
                     frame, panoptic_seg.to(self.cpu_device), segments_info
                 )
             elif "instances" in predictions:
+                confidence = predictions["instances"].scores.cpu().numpy()
+                class_ids = predictions["instances"].pred_classes.cpu().numpy()
+                bounding_boxes = predictions["instances"].pred_boxes.tensor.cpu().numpy()
+                print(confidence, class_ids, bounding_boxes)
                 predictions = predictions["instances"].to(self.cpu_device)
                 vis_frame = video_visualizer.draw_instance_predictions(frame, predictions)
             elif "sem_seg" in predictions:
