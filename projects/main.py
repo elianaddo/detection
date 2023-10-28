@@ -1,10 +1,18 @@
 import os
-import subprocess
 import sys
+import pathlib
+
+script = pathlib.Path(__file__).resolve()
+project_dir = script.parent.absolute()
+ssd_dir = project_dir / "ssd_mobilenet"
+sys.path.insert(0, str(ssd_dir))
+
+import subprocess
 import cv2
 import argparse
 from detectron2.api import hello as detectron2hello
 from ssd_mobilenet.api import hello as ssdhello
+from ssd_mobilenet.api import drawboundingboxes as ssd_dboxes
 #from yolov8.api import hello as yolohello
 import time
 
@@ -52,7 +60,6 @@ def _execDet2(videopath):
 
 def _execSSDMobile(videopath):
     start_time = time.time()
-    print(ssdhello())
 
     # Loading video
     cap = cv2.VideoCapture(videopath)
@@ -64,8 +71,8 @@ def _execSSDMobile(videopath):
     count = 0
     while cap.isOpened():
         ret, frame = cap.read()
-        #class_ids, boxes, confidences=drawboundingboxes(frame)
-        #print(class_ids, boxes, confidences)
+        ids, confid, boxes = ssd_dboxes(frame, count)
+        print(ids, confid, boxes)
         cv2.imshow('window-name', frame)
         count = count + 1
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q'):
@@ -79,43 +86,43 @@ def _execSSDMobile(videopath):
     cv2.destroyAllWindows()
     print("Exec time ssd: %s seconds " % (time.time() - start_time))
 
-def _yolo():
+def _execYolo():
     start_time = time.time()
     print("Exec time yolo: %s seconds " % (time.time() - start_time))
 
-def execDet2(video_file):
-    start_time = time.time()
-    delta = time.time() - start_time
-    print("Exec time det: %s seconds " % round(delta, 4))
-
-def execSSDMobile(video_file):
-    start_time = time.time()
-    cwd = os.getcwd()
-    pathToGo = os.path.join(cwd, "ssd_mobilenet")
-    print(video_file)
-    print(pathToGo)
-    os.chdir(pathToGo)
-    try:
-         subprocess.run(
-             [
-                 "python",
-                 "people_counter.py",
-                 "--prototxt", "detector/MobileNetSSD_deploy.prototxt",
-                 "--model", "detector/MobileNetSSD_deploy.caffemodel",
-                 "--input", video_file
-             ])
-    except:
-        print("ocorreu um erro")
-    finally:
-        os.chdir(cwd)
-    #python people_counter.py --prototxt detector/MobileNetSSD_deploy.prototxt --model detector/MobileNetSSD_deploy.caffemodel --input utils/data/tests/test_1.mp4
-    delta = time.time() - start_time
-    print("Exec time SSD: %s seconds " % round(delta, 4))
-
-def execYolo(video_file):
-    start_time = time.time()
-    delta = time.time() - start_time
-    print("Exec time yoloV8: %s seconds " % round(delta, 4))
+# def execDet2(video_file):
+#     start_time = time.time()
+#     delta = time.time() - start_time
+#     print("Exec time det: %s seconds " % round(delta, 4))
+#
+# def execSSDMobile(video_file):
+#     start_time = time.time()
+#     cwd = os.getcwd()
+#     pathToGo = os.path.join(cwd, "ssd_mobilenet")
+#     print(video_file)
+#     print(pathToGo)
+#     os.chdir(pathToGo)
+#     try:
+#          subprocess.run(
+#              [
+#                  "python",
+#                  "people_counter.py",
+#                  "--prototxt", "detector/MobileNetSSD_deploy.prototxt",
+#                  "--model", "detector/MobileNetSSD_deploy.caffemodel",
+#                  "--input", video_file
+#              ])
+#     except:
+#         print("ocorreu um erro")
+#     finally:
+#         os.chdir(cwd)
+#     #python people_counter.py --prototxt detector/MobileNetSSD_deploy.prototxt --model detector/MobileNetSSD_deploy.caffemodel --input utils/data/tests/test_1.mp4
+#     delta = time.time() - start_time
+#     print("Exec time SSD: %s seconds " % round(delta, 4))
+#
+# def execYolo(video_file):
+#     start_time = time.time()
+#     delta = time.time() - start_time
+#     print("Exec time yoloV8: %s seconds " % round(delta, 4))
 
 #verifica se o video é passado - verifca na shell
 def main(argv=None):
@@ -134,9 +141,9 @@ def main(argv=None):
 
     real_path = os.path.realpath(video_file)
 
-    execDet2(real_path)
-    execSSDMobile(real_path)
-    execYolo(real_path)
+    _execSSDMobile(real_path)
+#    _execDet2(real_path)
+#    _execYolo(real_path)
     return 0
 
 #0=tudo ok 1=erro
