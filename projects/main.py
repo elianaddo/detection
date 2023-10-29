@@ -5,15 +5,17 @@ import pathlib
 script = pathlib.Path(__file__).resolve()
 project_dir = script.parent.absolute()
 ssd_dir = project_dir / "ssd_mobilenet"
+det2_dir = project_dir / "detectron2"
 sys.path.insert(0, str(ssd_dir))
+sys.path.insert(1, str(det2_dir))
 
 import subprocess
 import cv2
 import argparse
-from detectron2.api import hello as detectron2hello
-from ssd_mobilenet.api import hello as ssdhello
+from det2_api import hello as detectron2hello
+from det2_api import drawboundingboxes as det2_dboxes
 from ssd_mobilenet.api import drawboundingboxes as ssd_dboxes
-#from yolov8.api import hello as yolohello
+from yolov8.api import hello as yolohello
 import time
 
 #variavel global para mudar o intervalo de espera por frame
@@ -36,23 +38,22 @@ def _execDet2(videopath):
 
     # Loading video
     cap = cv2.VideoCapture(videopath)
-    font = cv2.FONT_HERSHEY_PLAIN
-    frame_id = 0
+    # font = cv2.FONT_HERSHEY_PLAIN
+    # frame_id = 0
 
     #frame a frame
-
     count = 0
     while cap.isOpened():
         ret, frame = cap.read()
-        #class_ids, boxes, confidences=drawboundingboxes(frame)
-        #print(class_ids, boxes, confidences)
-        cv2.imshow('window-name', frame)
+        class_ids, confidence, bounding_boxes, new_frame = det2_dboxes(frame, count)
+        print(class_ids, confidence, bounding_boxes)
+        cv2.imshow('window-name', new_frame.get_image()[:, :, ::-1])
         count = count + 1
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q'):
             break
         if cap.get(cv2.CAP_PROP_POS_FRAMES) == cap.get(cv2.CAP_PROP_FRAME_COUNT):
-        # If the number of captured frames is equal to the total number of frames,
-        # we stop
+            # If the number of captured frames is equal to the total number of frames,
+            # we stop
             break
     cap.release()
     cv2.destroyAllWindows()
@@ -63,8 +64,8 @@ def _execSSDMobile(videopath):
 
     # Loading video
     cap = cv2.VideoCapture(videopath)
-    font = cv2.FONT_HERSHEY_PLAIN
-    frame_id = 0
+    # font = cv2.FONT_HERSHEY_PLAIN
+    # frame_id = 0
 
     #frame a frame
 
@@ -78,15 +79,15 @@ def _execSSDMobile(videopath):
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q'):
             break
         if cap.get(cv2.CAP_PROP_POS_FRAMES) == cap.get(cv2.CAP_PROP_FRAME_COUNT):
-        # If the number of captured frames is equal to the total number of frames,
-        # we stop
+            # If the number of captured frames is equal to the total number of frames,
+            # we stop
             break
 
     cap.release()
     cv2.destroyAllWindows()
     print("Exec time ssd: %s seconds " % (time.time() - start_time))
 
-def _execYolo():
+def _execYolo(videopath):
     start_time = time.time()
     print("Exec time yolo: %s seconds " % (time.time() - start_time))
 
@@ -141,8 +142,8 @@ def main(argv=None):
 
     real_path = os.path.realpath(video_file)
 
-    _execSSDMobile(real_path)
-#    _execDet2(real_path)
+#    _execSSDMobile(real_path)
+    _execDet2(real_path)
 #    _execYolo(real_path)
     return 0
 
