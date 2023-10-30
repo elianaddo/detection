@@ -18,16 +18,19 @@ script = pathlib.Path(__file__).resolve()
 det2_dir = str(script.parent.absolute())
 CFG = {
     # configs/COCO-Detection/faster_rcnn_R_50_DC5_3x.yaml
-    "config_file": os.path.join(det2_dir, "configs", "COCO-Detection", "faster_rcnn_R_50_DC5_3x.yaml"),
+    "config_file": os.path.join(det2_dir, "configs", "COCO-Detection", "retinanet_R_50_FPN_1x.yaml"),
     # MODEL.WEIGHTS detectron2://COCO-Detection/faster_rcnn_R_50_DC5_3x/137849425/model_final_68d202.pkl
-    "opts": ["MODEL.WEIGHTS", "detectron2://COCO-Detection/faster_rcnn_R_50_DC5_3x/137849425/model_final_68d202.pkl"],
+    # https://dl.fbaipublicfiles.com/detectron2/COCO-Detection/faster_rcnn_R_50_FPN_1x/137257794/model_final_b275ba.pkl
+    # https://dl.fbaipublicfiles.com/detectron2/COCO-Detection/retinanet_R_50_FPN_1x/190397773/model_final_bfca0b.pkl
+
+    "opts": ["MODEL.WEIGHTS", "detectron2://COCO-Detection/retinanet_R_50_FPN_1x/190397773/model_final_bfca0b.pkl"],
     "confidence" : 0.4
 }
 
 def setup_cfg():
     # load config from file and command-line arguments
     cfg = get_cfg()
-    cfg.MODEL.DEVICE = 'cpu'
+    cfg.MODEL.DEVICE = 'cuda'
     # To use demo for Panoptic-DeepLab, please uncomment the following two lines.
     # from detectron2.projects.panoptic_deeplab import add_panoptic_deeplab_config  # noqa
     # add_panoptic_deeplab_config(cfg)
