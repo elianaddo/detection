@@ -102,6 +102,7 @@ if __name__ == "__main__":
 
     demo = VisualizationDemo(cfg)
 
+
     if args.input:
         if len(args.input) == 1:
             args.input = glob.glob(os.path.expanduser(args.input[0]))
@@ -134,6 +135,9 @@ if __name__ == "__main__":
                 cv2.imshow(WINDOW_NAME, visualized_output.get_image()[:, :, ::-1])
                 if cv2.waitKey(0) == 27:
                     break  # esc to quit
+
+
+
     elif args.webcam:
         assert args.input is None, "Cannot have both --input and --webcam!"
         assert args.output is None, "output not yet supported with --webcam!"
@@ -183,7 +187,11 @@ if __name__ == "__main__":
                 if cv2.waitKey(1) == 27:
                     break  # esc to quit
         video.release()
+
+
+
         if args.output:
             output_file.release()
         else:
             cv2.destroyAllWindows()
+
