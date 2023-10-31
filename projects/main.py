@@ -132,7 +132,7 @@ def _execYolo(videopath):
                 scores.append(maxScore)
                 class_ids.append(maxClassIndex)
         print(class_ids, scores, boxes)
-        # cv2.imshow('window-name', frame)
+        cv2.imshow('window-name', frame)
         count = count + 1
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q'):
             break
@@ -197,8 +197,8 @@ def main(argv=None):
 
     real_path = os.path.realpath(video_file)
 
-    #_execSSDMobile(real_path)
-    _execDet2(real_path)
+    _execSSDMobile(real_path)
+    #_execDet2(real_path)
     #_execYolo(real_path)
     return 0
 
