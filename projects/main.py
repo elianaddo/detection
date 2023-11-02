@@ -33,23 +33,35 @@ def parse(argv):
                         help="input video file")
     return parser.parse_args(argv)
 
+def draw_bboxes(frame, ids, confidences, boxes):
+    for id_, confidence, bbox in zip(ids, confidences, boxes):
+        print(id_, confidence, bbox)
+        xi, yi, xf, yf = bbox
+        #garante que todas as coordenadas sejam inteiras
+        xi, yi, xf, yf = int(xi), int(yi), int(xf), int(yf)
+        p1 = (xi, yi)
+        p2 = (xf, yf)
+        newFrame = cv2.rectangle(frame, p1, p2, (255, 0, 0), 4)
+        center = (int(xf - ((xf - xi) / 2)), int(yf - ((yf - yi) / 2)))
+        print(center)
+        newFrame = cv2.circle(newFrame, center, 4, (255, 255, 255), -1)
+
+        cv2.imshow('window-name', newFrame)
+    else:
+        cv2.imshow('window-name', frame)
+
 def _execDet2(videopath):
-
-    # print(detectron2hello())
-
     # Loading video
     cap = cv2.VideoCapture(videopath)
-    # font = cv2.FONT_HERSHEY_PLAIN
-    # frame_id = 0
+
     #frame a frame
-    start_time = time.time()
-    count = 0
+    count, start_time = 0, time.time()
     while cap.isOpened():
         ret, frame = cap.read()
-        class_ids, confidence, bounding_boxes, new_frame = det2_dboxes(frame, count)
-        print(class_ids, confidence, bounding_boxes)
+        ids, confidences, boxes, new_frame = det2_dboxes(frame, count)
+        draw_bboxes(frame, ids, confidences, boxes)
         # cv2.imshow('window-name', new_frame.get_image()[:, :, ::-1])
-        # cv2.imshow('window-name', frame)
+        #cv2.imshow('window-name', frame)
         count = count + 1
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q'):
             break
@@ -63,20 +75,15 @@ def _execDet2(videopath):
     cv2.destroyAllWindows()
 
 def _execSSDMobile(videopath):
-
     # Loading video
     cap = cv2.VideoCapture(videopath)
-    # font = cv2.FONT_HERSHEY_PLAIN
-    # frame_id = 0
 
     #frame a frame
-    start_time = time.time()
-    count = 0
+    count, start_time = 0, time.time()
     while cap.isOpened():
         ret, frame = cap.read()
-        ids, confid, boxes = ssd_dboxes(frame, count)
-        print(ids, confid, boxes)
-        # cv2.imshow('window-name', frame)
+        ids, confidences, boxes = ssd_dboxes(frame, count)
+        draw_bboxes(frame, ids, confidences, boxes)
         count = count + 1
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q'):
             break
@@ -146,41 +153,7 @@ def _execYolo(videopath):
     cap.release()
     cv2.destroyAllWindows()
 
-# def execDet2(video_file):
-#     start_time = time.time()
-#     delta = time.time() - start_time
-#     print("Exec time det: %s seconds " % round(delta, 4))
-#
-# def execSSDMobile(video_file):
-#     start_time = time.time()
-#     cwd = os.getcwd()
-#     pathToGo = os.path.join(cwd, "ssd_mobilenet")
-#     print(video_file)
-#     print(pathToGo)
-#     os.chdir(pathToGo)
-#     try:
-#          subprocess.run(
-#              [
-#                  "python",
-#                  "people_counter.py",
-#                  "--prototxt", "detector/MobileNetSSD_deploy.prototxt",
-#                  "--model", "detector/MobileNetSSD_deploy.caffemodel",
-#                  "--input", video_file
-#              ])
-#     except:
-#         print("ocorreu um erro")
-#     finally:
-#         os.chdir(cwd)
-#     #python people_counter.py --prototxt detector/MobileNetSSD_deploy.prototxt --model detector/MobileNetSSD_deploy.caffemodel --input utils/data/tests/test_1.mp4
-#     delta = time.time() - start_time
-#     print("Exec time SSD: %s seconds " % round(delta, 4))
-#
-# def execYolo(video_file):
-#     start_time = time.time()
-#     delta = time.time() - start_time
-#     print("Exec time yoloV8: %s seconds " % round(delta, 4))
-
-#verifica se o video é passado - verifca na shell
+# verifica se o video é passado - verifca na shell
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
