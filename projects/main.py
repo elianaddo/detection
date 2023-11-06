@@ -1,6 +1,8 @@
 import os
 import sys
 import pathlib
+from math import sqrt
+
 import numpy as np
 
 script = pathlib.Path(__file__).resolve()
@@ -14,13 +16,15 @@ import subprocess
 import cv2
 import argparse
 #from det2_api import hello as detectron2hello
-from det2_api import drawboundingboxes as det2_dboxes
+#from det2_api import drawboundingboxes as det2_dboxes
 from ssd_mobilenet.api import drawboundingboxes as ssd_dboxes
 #from yolov8.api import hello as yolohello
 import time
 
 #variavel global para mudar o intervalo de espera por frame
 TIME_WAIT_KEY = 10
+MAX_NORMA = 30
+COUNTER = 0
 
 #faz o parse do argv (os argumentos que vao para a shell)
 def parse(argv):
@@ -33,9 +37,32 @@ def parse(argv):
                         help="input video file")
     return parser.parse_args(argv)
 
-def draw_bboxes(frame, ids, confidences, boxes):
+def within_valid_range(c1, c2):
+    c1x, c1y = c1
+    c2x, c2y = c2
+    # cacula a norma
+    norma = sqrt(((c2x - c1x) ** 2) + ((c2y - c1y) ** 2))
+    print("Norma: ", norma)
+    if norma <= MAX_NORMA:
+        return True
+    return False
+def update(centroids, center1):
+    global COUNTER
+    for id_, center2 in centroids.items():
+        if within_valid_range(center1, center2):
+            # update
+            centroids[id_] = center1
+            return id_, center2
+    # otherwise create
+    centroids[COUNTER] = center1
+    ret = COUNTER
+    COUNTER += 1
+    return ret, center1
+
+def draw_bboxes(frame, centroids, ids, confidences, boxes):
+    global COUNTER
     for id_, confidence, bbox in zip(ids, confidences, boxes):
-        print(id_, confidence, bbox)
+        print("draw_bboxes", id_, confidence, bbox)
         xi, yi, xf, yf = bbox
         #garante que todas as coordenadas sejam inteiras
         xi, yi, xf, yf = int(xi), int(yi), int(xf), int(yf)
@@ -43,12 +70,17 @@ def draw_bboxes(frame, ids, confidences, boxes):
         p2 = (xf, yf)
         newFrame = cv2.rectangle(frame, p1, p2, (255, 0, 0), 4)
         center = (int(xf - ((xf - xi) / 2)), int(yf - ((yf - yi) / 2)))
-        print(center)
+        print("draw_bboxes", center)
+        id_centroid, old_center = update(centroids, center)
+        id_text = f"ID {id_centroid}"
+        newFrame = cv2.putText(newFrame, id_text, center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
         newFrame = cv2.circle(newFrame, center, 4, (255, 255, 255), -1)
-
+        newFrame = cv2.line(newFrame, old_center, center, (0, 0, 255), 2)  # Connect centroids with lines
+        print("draw_bboxes", centroids)
         cv2.imshow('window-name', newFrame)
     else:
         cv2.imshow('window-name', frame)
+
 
 def _execDet2(videopath):
     # Loading video
@@ -77,13 +109,13 @@ def _execDet2(videopath):
 def _execSSDMobile(videopath):
     # Loading video
     cap = cv2.VideoCapture(videopath)
-
+    centroids = {}
     #frame a frame
     count, start_time = 0, time.time()
     while cap.isOpened():
         ret, frame = cap.read()
         ids, confidences, boxes = ssd_dboxes(frame, count)
-        draw_bboxes(frame, ids, confidences, boxes)
+        draw_bboxes(frame, centroids, ids, confidences, boxes)
         count = count + 1
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q'):
             break
@@ -153,7 +185,7 @@ def _execYolo(videopath):
     cap.release()
     cv2.destroyAllWindows()
 
-# verifica se o video é passado - verifca na shell
+# verifica se o video Ã© passado - verifca na shell
 def main(argv=None):
     if argv is None:
         argv = sys.argv[1:]
