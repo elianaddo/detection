@@ -19,6 +19,7 @@ import argparse
 #from det2_api import drawboundingboxes as det2_dboxes
 from ssd_mobilenet.api import drawboundingboxes as ssd_dboxes
 #from yolov8.api import hello as yolohello
+from Centroid import Centroid
 import time
 
 #variavel global para mudar o intervalo de espera por frame
@@ -46,18 +47,20 @@ def within_valid_range(c1, c2):
     if norma <= MAX_NORMA:
         return True
     return False
-def update(centroids, center1):
+def update(centroids, x, y):
     global COUNTER
-    for id_, center2 in centroids.items():
-        if within_valid_range(center1, center2):
+    for id_, centroid in centroids.items():
+        #vou buscar a ultima e calculo
+        if within_valid_range((x, y), centroid.last_pos()):
             # update
-            centroids[id_] = center1
-            return id_, center2
+            centroid.update(x, y)
+            return centroid
     # otherwise create
-    centroids[COUNTER] = center1
-    ret = COUNTER
+    aux = Centroid(COUNTER)
+    aux.update(x, y)
+    centroids[COUNTER] = aux
     COUNTER += 1
-    return ret, center1
+    return aux
 
 def draw_bboxes(frame, centroids, ids, confidences, boxes):
     global COUNTER
@@ -69,14 +72,9 @@ def draw_bboxes(frame, centroids, ids, confidences, boxes):
         p1 = (xi, yi)
         p2 = (xf, yf)
         newFrame = cv2.rectangle(frame, p1, p2, (255, 0, 0), 4)
-        center = (int(xf - ((xf - xi) / 2)), int(yf - ((yf - yi) / 2)))
-        print("draw_bboxes", center)
-        id_centroid, old_center = update(centroids, center)
-        id_text = f"ID {id_centroid}"
-        newFrame = cv2.putText(newFrame, id_text, center, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-        newFrame = cv2.circle(newFrame, center, 4, (255, 255, 255), -1)
-        newFrame = cv2.line(newFrame, old_center, center, (0, 0, 255), 2)  # Connect centroids with lines
-        print("draw_bboxes", centroids)
+        x, y = (int(xf - ((xf - xi) / 2)), int(yf - ((yf - yi) / 2)))
+        centroid = update(centroids, x, y)
+        newFrame = centroid.draw(newFrame)
         cv2.imshow('window-name', newFrame)
     else:
         cv2.imshow('window-name', frame)
@@ -201,6 +199,14 @@ def main(argv=None):
         return 1
 
     real_path = os.path.realpath(video_file)
+
+    centroid1 = Centroid(1)
+
+    print(centroid1.id_centroid)
+    print(centroid1.centerPoints)
+
+    centroid1.update(12, 13)
+    print(centroid1.centerPoints)
 
     _execSSDMobile(real_path)
     #_execDet2(real_path)
