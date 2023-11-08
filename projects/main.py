@@ -19,7 +19,7 @@ import argparse
 #from det2_api import drawboundingboxes as det2_dboxes
 from ssd_mobilenet.api import drawboundingboxes as ssd_dboxes
 #from yolov8.api import hello as yolohello
-from Centroid import Centroid
+from centroid import Centroid, CentroidTracker
 import time
 
 #variavel global para mudar o intervalo de espera por frame
@@ -38,31 +38,7 @@ def parse(argv):
                         help="input video file")
     return parser.parse_args(argv)
 
-def within_valid_range(c1, c2):
-    c1x, c1y = c1
-    c2x, c2y = c2
-    # cacula a norma
-    norma = sqrt(((c2x - c1x) ** 2) + ((c2y - c1y) ** 2))
-    print("Norma: ", norma)
-    if norma <= MAX_NORMA:
-        return True
-    return False
-def update(centroids, x, y):
-    global COUNTER
-    for id_, centroid in centroids.items():
-        #vou buscar a ultima e calculo
-        if within_valid_range((x, y), centroid.last_pos()):
-            # update
-            centroid.update(x, y)
-            return centroid
-    # otherwise create
-    aux = Centroid(COUNTER)
-    aux.update(x, y)
-    centroids[COUNTER] = aux
-    COUNTER += 1
-    return aux
-
-def draw_bboxes(frame, centroids, ids, confidences, boxes):
+def draw_bboxes(frame, c_tracker, ids, confidences, boxes):
     global COUNTER
     for id_, confidence, bbox in zip(ids, confidences, boxes):
         print("draw_bboxes", id_, confidence, bbox)
@@ -73,7 +49,7 @@ def draw_bboxes(frame, centroids, ids, confidences, boxes):
         p2 = (xf, yf)
         newFrame = cv2.rectangle(frame, p1, p2, (255, 0, 0), 4)
         x, y = (int(xf - ((xf - xi) / 2)), int(yf - ((yf - yi) / 2)))
-        centroid = update(centroids, x, y)
+        centroid = c_tracker.update(x, y)
         newFrame = centroid.draw(newFrame)
         cv2.imshow('window-name', newFrame)
     else:
@@ -107,13 +83,13 @@ def _execDet2(videopath):
 def _execSSDMobile(videopath):
     # Loading video
     cap = cv2.VideoCapture(videopath)
-    centroids = {}
+    c_tracker = CentroidTracker()
     #frame a frame
     count, start_time = 0, time.time()
     while cap.isOpened():
         ret, frame = cap.read()
         ids, confidences, boxes = ssd_dboxes(frame, count)
-        draw_bboxes(frame, centroids, ids, confidences, boxes)
+        draw_bboxes(frame, c_tracker, ids, confidences, boxes)
         count = count + 1
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q'):
             break
