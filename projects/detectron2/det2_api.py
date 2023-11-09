@@ -24,7 +24,7 @@ CFG = {
     # https://dl.fbaipublicfiles.com/detectron2/COCO-Detection/retinanet_R_50_FPN_1x/190397773/model_final_bfca0b.pkl
 
     "opts": ["MODEL.WEIGHTS", "detectron2://COCO-Detection/retinanet_R_50_FPN_1x/190397773/model_final_bfca0b.pkl"],
-    "confidence" : 0.4
+    "confidence" : 0.6
 }
 
 def setup_cfg():
@@ -101,4 +101,5 @@ def drawboundingboxes(frame, totalFrames):
     confidence = preds["instances"].scores.cpu().numpy()
     class_ids = preds["instances"].pred_classes.cpu().numpy()
     bounding_boxes = preds["instances"].pred_boxes.tensor.cpu().numpy()
+    print(preds["instances"].pred_classes.tolist())
     return class_ids, confidence, bounding_boxes
