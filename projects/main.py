@@ -41,6 +41,8 @@ def parse(argv):
 def draw_bboxes(frame, c_tracker, ids, confidences, boxes):
     global COUNTER
     for id_, confidence, bbox in zip(ids, confidences, boxes):
+        #if id_ != 0:
+        #    continue
         print("draw_bboxes", id_, confidence, bbox)
         xi, yi, xf, yf = bbox
         #garante que todas as coordenadas sejam inteiras
@@ -55,17 +57,16 @@ def draw_bboxes(frame, c_tracker, ids, confidences, boxes):
     else:
         cv2.imshow('window-name', frame)
 
-
 def _execDet2(videopath):
     # Loading video
     cap = cv2.VideoCapture(videopath)
-
+    c_tracker = CentroidTracker()
     #frame a frame
     count, start_time = 0, time.time()
     while cap.isOpened():
         ret, frame = cap.read()
         ids, confidences, boxes, new_frame = det2_dboxes(frame, count)
-        draw_bboxes(frame, ids, confidences, boxes)
+        draw_bboxes(frame, c_tracker, ids, confidences, boxes)
         # cv2.imshow('window-name', new_frame.get_image()[:, :, ::-1])
         #cv2.imshow('window-name', frame)
         count = count + 1
@@ -89,6 +90,7 @@ def _execSSDMobile(videopath):
     while cap.isOpened():
         ret, frame = cap.read()
         ids, confidences, boxes = ssd_dboxes(frame, count)
+        print(boxes)
         draw_bboxes(frame, c_tracker, ids, confidences, boxes)
         count = count + 1
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q'):
@@ -98,6 +100,8 @@ def _execSSDMobile(videopath):
             # we stop
             break
         print(count/(time.time() - start_time))
+        #if len(boxes) != 0 :
+        #   time.sleep(1)
 
     print("Exec time ssd: %s seconds " % (time.time() - start_time))
     cap.release()
@@ -106,7 +110,7 @@ def _execSSDMobile(videopath):
 def _execYolo(videopath):
     model: cv2.dnn.Net = cv2.dnn.readNetFromONNX('yolov8n.onnx')
     cap = cv2.VideoCapture(videopath)
-
+    c_tracker = CentroidTracker()
     # font = cv2.FONT_HERSHEY_PLAIN
     # frame_id = 0
 
@@ -137,7 +141,7 @@ def _execYolo(videopath):
         for i in range(rows):
             classes_scores = outputs[0][i][4:]
             (minScore, maxScore, minClassLoc, (x, maxClassIndex)) = cv2.minMaxLoc(classes_scores)
-            if maxScore >= 0.25:
+            if maxScore >= 0.5:
                 box = [
                     outputs[0][i][0] - (0.5 * outputs[0][i][2]), outputs[0][i][1] - (0.5 * outputs[0][i][3]),
                     outputs[0][i][2], outputs[0][i][3]]
@@ -145,6 +149,9 @@ def _execYolo(videopath):
                 scores.append(maxScore)
                 class_ids.append(maxClassIndex)
         print(class_ids, scores, boxes)
+
+        draw_bboxes(frame, c_tracker, class_ids, scores, boxes)
+
         cv2.imshow('window-name', frame)
         count = count + 1
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q'):
@@ -177,10 +184,8 @@ def main(argv=None):
     real_path = os.path.realpath(video_file)
 
     centroid1 = Centroid(1)
-
     print(centroid1.id_centroid)
     print(centroid1.centerPoints)
-
     centroid1.update(12, 13)
     print(centroid1.centerPoints)
 
