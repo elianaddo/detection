@@ -12,8 +12,8 @@ sys.path.insert(1, str(det2_dir))
 
 import cv2
 import argparse
-from det2_api import drawboundingboxes as det2_dboxes
-from ssd_mobilenet.api import drawboundingboxes as ssd_dboxes
+from det2_api import drawboundingboxes as det2_dboxes, CFG as CFG2
+from ssd_mobilenet.api import drawboundingboxes as ssd_dboxes, CFG as CFG1
 #from yolov8.api import hello as yolohello
 from centroid import Centroid, CentroidTracker
 import time
@@ -23,87 +23,26 @@ TIME_WAIT_KEY = 10
 MAX_NORMA = 30
 COUNTER = 0
 
-CLASSES = {0: u'background',
- 1: u'person',
- 2: u'bicycle',
- 3: u'car',
- 4: u'motorcycle',
- 5: u'airplane',
- 6: u'bus',
- 7: u'train',
- 8: u'truck',
- 9: u'boat',
- 10: u'traffic light',
- 11: u'fire hydrant',
- 12: u'stop sign',
- 13: u'parking meter',
- 14: u'bench',
- 15: u'bird',
- 16: u'cat',
- 17: u'dog',
- 18: u'horse',
- 19: u'sheep',
- 20: u'cow',
- 21: u'elephant',
- 22: u'bear',
- 23: u'zebra',
- 24: u'giraffe',
- 25: u'backpack',
- 26: u'umbrella',
- 27: u'handbag',
- 28: u'tie',
- 29: u'suitcase',
- 30: u'frisbee',
- 31: u'skis',
- 32: u'snowboard',
- 33: u'sports ball',
- 34: u'kite',
- 35: u'baseball bat',
- 36: u'baseball glove',
- 37: u'skateboard',
- 38: u'surfboard',
- 39: u'tennis racket',
- 40: u'bottle',
- 41: u'wine glass',
- 42: u'cup',
- 43: u'fork',
- 44: u'knife',
- 45: u'spoon',
- 46: u'bowl',
- 47: u'banana',
- 48: u'apple',
- 49: u'sandwich',
- 50: u'orange',
- 51: u'broccoli',
- 52: u'carrot',
- 53: u'hot dog',
- 54: u'pizza',
- 55: u'donut',
- 56: u'cake',
- 57: u'chair',
- 58: u'couch',
- 59: u'potted plant',
- 60: u'bed',
- 61: u'dining table',
- 62: u'toilet',
- 63: u'tv',
- 64: u'laptop',
- 65: u'mouse',
- 66: u'remote',
- 67: u'keyboard',
- 68: u'cell phone',
- 69: u'microwave',
- 70: u'oven',
- 71: u'toaster',
- 72: u'sink',
- 73: u'refrigerator',
- 74: u'book',
- 75: u'clock',
- 76: u'vase',
- 77: u'scissors',
- 78: u'teddy bear',
- 79: u'hair drier',
- 80: u'toothbrush'}
+
+CLASSES = {
+    0: 'background', 1: 'person', 2: 'bicycle', 3: 'car', 4: 'motorcycle',
+    5: 'airplane', 6: 'bus', 7: 'train', 8: 'truck', 9: 'boat', 10: 'traffic light',
+    11: 'fire hydrant', 12: 'stop sign', 13: 'parking meter', 14: 'bench', 15: 'bird',
+    16: 'cat', 17: 'dog', 18: 'horse', 19: 'sheep', 20: 'cow', 21: 'elephant',
+    22: 'bear', 23: 'zebra', 24: 'giraffe', 25: 'backpack', 26: 'umbrella',
+    27: 'handbag', 28: 'tie', 29: 'suitcase', 30: 'frisbee', 31: 'skis',
+    32: 'snowboard', 33: 'sports ball', 34: 'kite', 35: 'baseball bat',
+    36: 'baseball glove', 37: 'skateboard', 38: 'surfboard', 39: 'tennis racket',
+    40: 'bottle', 41: 'wine glass', 42: 'cup', 43: 'fork', 44: 'knife',
+    45: 'spoon', 46: 'bowl', 47: 'banana', 48: 'apple', 49: 'sandwich',
+    50: 'orange', 51: 'broccoli', 52: 'carrot', 53: 'hot dog', 54: 'pizza',
+    55: 'donut', 56: 'cake', 57: 'chair', 58: 'couch', 59: 'potted plant',
+    60: 'bed', 61: 'dining table', 62: 'toilet', 63: 'tv', 64: 'laptop',
+    65: 'mouse', 66: 'remote', 67: 'keyboard', 68: 'cell phone', 69: 'microwave',
+    70: 'oven', 71: 'toaster', 72: 'sink', 73: 'refrigerator', 74: 'book',
+    75: 'clock', 76: 'vase', 77: 'scissors', 78: 'teddy bear', 79: 'hair drier',
+    80: 'toothbrush'
+}
 
 #faz o parse do argv (os argumentos que vao para a shell)
 def parse(argv):
@@ -120,50 +59,87 @@ def parse(argv):
 
     parser.add_argument("--yolo", dest="yolo", action="store_true")
 
+    parser.add_argument('--c1x', type=int, help='X-coordinate of the first point', default=0, action="store")
+    parser.add_argument('--c1y', type=int, help='Y-coordinate of the first point', default=170, action="store")
+    parser.add_argument('--c2x', type=int, help='X-coordinate of the second point', default=500, action="store")
+    parser.add_argument('--c2y', type=int, help='Y-coordinate of the second point', default=170, action="store")
+
+    parser.add_argument('--confidence', type=float, help='Confidence threshold', default=0.4, action="store")
+
     return parser.parse_args(argv)
 
-def draw_bboxes(frame, c_tracker, ids, confidences, boxes):
+def check_crossed_line(centroid, line_coords):
+    x, y = centroid.last_pos()
+
+    # Line equation: y = mx + b
+    m = (line_coords[3] - line_coords[1]) / (line_coords[2] - line_coords[0])
+    b = line_coords[1] - m * line_coords[0]
+
+    # Calculate the expected y-coordinate on the line for the current centroid x-coordinate
+    expected_y = m * x + b
+
+    ys = [c[1] for c in centroid.centerPoints]
+    direction = y - np.mean(ys)
+
+    if (direction < -5) and (y < expected_y):
+        print(centroid.id_centroid, " Saiu!")
+
+    elif (direction > 5) and (y > expected_y) and not centroid.inside:
+        print(centroid.id_centroid, " Entrou!")
+        centroid.inside = True
+
+def draw_bboxes(frame, c_tracker, ids, confidences, boxes, line_coords):
     global COUNTER
     for id_, confidence, bbox in zip(ids, confidences, boxes):
-        if CLASSES[id_ + 1] != "person":
+        if id_ != "person":
             cv2.imshow('window-name', frame)
             continue
-        print("draw_bboxes", CLASSES[id_ + 1], confidence, bbox)
+        # print("draw_bboxes", id_, confidence, bbox)
         xi, yi, xf, yf = map(int, bbox)
         p1, p2 = (xi, yi), (xf, yf)
         frame = cv2.rectangle(frame, p1, p2, (255, 0, 0), 4)
         x, y = (int(xf - ((xf - xi) / 2)), int(yf - ((yf - yi) / 2)))
         centroid = c_tracker.update(x, y)
+
+        # Check if the centroid crosses the line from top to bottom
+        check_crossed_line(centroid, line_coords)
+
         frame = centroid.draw(frame)
+
     return frame
 
-def execute_detection(videopath, detection_function):
+def execute_detection(videopath, detection_function, c1, c2):
     cap = cv2.VideoCapture(videopath)
-    c_tracker = CentroidTracker()
+    c_tracker = CentroidTracker(max_norma=30)
     count, start_time = 0, time.time()
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
         ids, confidences, boxes = detection_function(frame, count)
-        frame = draw_bboxes(frame, c_tracker, ids, confidences, boxes)
+        frame = draw_bboxes(frame, c_tracker, ids, confidences, boxes, (c1[0], c1[1], c2[0], c2[1]))
         count += 1
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q') or cap.get(cv2.CAP_PROP_POS_FRAMES) == cap.get(cv2.CAP_PROP_FRAME_COUNT):
             break
-        frame = limite(frame)
+        frame = limite(frame, c1, c2)
         cv2.imshow('window-name', frame)
-        print(count / (time.time() - start_time))
+        # print(count / (time.time() - start_time))
     print(f"Exec time: {time.time() - start_time} seconds")
     cap.release()
     cv2.destroyAllWindows()
 
-def _execDet2(videopath):
-    execute_detection(videopath, det2_dboxes)
+def _execDet2(videopath, c1, c2, confidence):
+    CFG2["confidence"] = confidence
+    def ddet2_dboxes_wrapper(frame, count):
+        ids, confidences, boxes = det2_dboxes(frame, count)
+        return map(lambda id: CLASSES[id + 1], ids), confidences, boxes
+    execute_detection(videopath, ddet2_dboxes_wrapper, c1, c2)
 
-def _execSSDMobile(videopath):
-    execute_detection(videopath, ssd_dboxes)
+def _execSSDMobile(videopath, c1, c2, confidence):
+    CFG1["confidence"] = confidence
+    execute_detection(videopath, ssd_dboxes, c1, c2)
 
-def yoloApi(model, frame, count):
+def yoloApi(model, frame, count, confidence):
     [height, width, _] = frame.shape
     length = max((height, width))
     image = np.zeros((length, length, 3), np.uint8)
@@ -181,7 +157,7 @@ def yoloApi(model, frame, count):
     for i in range(rows):
         classes_scores = outputs[0][i][4:]
         (minScore, maxScore, minClassLoc, (x, maxClassIndex)) = cv2.minMaxLoc(classes_scores)
-        if maxScore >= 0.5:
+        if maxScore >= confidence:
             box = [
                 outputs[0][i][0] - (0.5 * outputs[0][i][2]), outputs[0][i][1] - (0.5 * outputs[0][i][3]),
                 outputs[0][i][2], outputs[0][i][3]]
@@ -190,13 +166,12 @@ def yoloApi(model, frame, count):
             class_ids.append(maxClassIndex)
     return class_ids, scores, boxes
 
-def _execYolo(videopath):
+def _execYolo(videopath, c1, c2, confidence):
     model: cv2.dnn.Net = cv2.dnn.readNetFromONNX('yolov8n.onnx')
-    execute_detection(videopath, lambda frame, count: yoloApi(model, frame, count))
+    execute_detection(videopath, lambda frame, count: yoloApi(model, frame, count, confidence), c1, c2)
 
-
-def limite(frame, c1=(0, 0), c2=(200, 200)):
-    cv2.line(frame ,c1, c2, (0, 255, 0), 9)
+def limite(frame, c1, c2):
+    cv2.line(frame ,c1, c2, (255, 255, 0), 2)
     return frame
 
 # verifica se o video é passado - verifca na shell
@@ -215,18 +190,23 @@ def main(argv=None):
 
     real_path = os.path.realpath(video_file)
 
+    c1 = (args.c1x, args.c1y) if args.c1x is not None and args.c1y is not None else (0, 170)
+    c2 = (args.c2x, args.c2y) if args.c2x is not None and args.c2y is not None else (400, 170)
+
+    confidence = args.confidence
+
     if args.ssd:
-        _execSSDMobile(real_path)
+        _execSSDMobile(real_path, c1, c2, confidence)
 
     if args.det2:
-        _execDet2(real_path)
+        _execDet2(real_path, c1, c2, confidence)
 
     if args.yolo:
-        _execYolo(real_path)
+        _execYolo(real_path, c1, c2, confidence)
 
     return 0
 
-# python main.py --modelo x --confianca x --p1x 0 --p1y 0 --p2x 100 --p3x 100
+# python main.py --modelo --confianca --p1x 0 --p1y 0 --p2x 100 --p2y 100
 #0=tudo ok 1=erro
 returncode = main()
 sys.exit(returncode)
