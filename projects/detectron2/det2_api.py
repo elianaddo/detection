@@ -24,7 +24,7 @@ CFG = {
     # https://dl.fbaipublicfiles.com/detectron2/COCO-Detection/retinanet_R_50_FPN_1x/190397773/model_final_bfca0b.pkl
 
     "opts": ["MODEL.WEIGHTS", "detectron2://COCO-Detection/retinanet_R_50_FPN_1x/190397773/model_final_bfca0b.pkl"],
-    "confidence" : 0.6
+    "confidence" : 0.5
 }
 
 def setup_cfg():
