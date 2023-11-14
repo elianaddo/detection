@@ -101,5 +101,5 @@ def drawboundingboxes(frame, totalFrames):
     confidence = preds["instances"].scores.cpu().numpy()
     class_ids = preds["instances"].pred_classes.cpu().numpy()
     bounding_boxes = preds["instances"].pred_boxes.tensor.cpu().numpy()
-    print(preds["instances"].pred_classes.tolist())
+    # print(preds["instances"].pred_classes.tolist())
     return class_ids, confidence, bounding_boxes

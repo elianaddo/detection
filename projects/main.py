@@ -22,26 +22,23 @@ import time
 TIME_WAIT_KEY = 10
 MAX_NORMA = 30
 COUNTER = 0
+DENTRO = 0
+FORA = 0
 
 
 CLASSES = {
-    0: 'background', 1: 'person', 2: 'bicycle', 3: 'car', 4: 'motorcycle',
-    5: 'airplane', 6: 'bus', 7: 'train', 8: 'truck', 9: 'boat', 10: 'traffic light',
-    11: 'fire hydrant', 12: 'stop sign', 13: 'parking meter', 14: 'bench', 15: 'bird',
-    16: 'cat', 17: 'dog', 18: 'horse', 19: 'sheep', 20: 'cow', 21: 'elephant',
-    22: 'bear', 23: 'zebra', 24: 'giraffe', 25: 'backpack', 26: 'umbrella',
-    27: 'handbag', 28: 'tie', 29: 'suitcase', 30: 'frisbee', 31: 'skis',
-    32: 'snowboard', 33: 'sports ball', 34: 'kite', 35: 'baseball bat',
-    36: 'baseball glove', 37: 'skateboard', 38: 'surfboard', 39: 'tennis racket',
-    40: 'bottle', 41: 'wine glass', 42: 'cup', 43: 'fork', 44: 'knife',
-    45: 'spoon', 46: 'bowl', 47: 'banana', 48: 'apple', 49: 'sandwich',
-    50: 'orange', 51: 'broccoli', 52: 'carrot', 53: 'hot dog', 54: 'pizza',
-    55: 'donut', 56: 'cake', 57: 'chair', 58: 'couch', 59: 'potted plant',
-    60: 'bed', 61: 'dining table', 62: 'toilet', 63: 'tv', 64: 'laptop',
-    65: 'mouse', 66: 'remote', 67: 'keyboard', 68: 'cell phone', 69: 'microwave',
-    70: 'oven', 71: 'toaster', 72: 'sink', 73: 'refrigerator', 74: 'book',
-    75: 'clock', 76: 'vase', 77: 'scissors', 78: 'teddy bear', 79: 'hair drier',
-    80: 'toothbrush'
+    0: 'background', 1: 'person', 2: 'bicycle', 3: 'car', 4: 'motorcycle', 5: 'airplane', 6: 'bus',
+    7: 'train', 8: 'truck', 9: 'boat', 10: 'traffic light', 11: 'fire hydrant', 12: 'stop sign',
+    13: 'parking meter', 14: 'bench', 15: 'bird', 16: 'cat', 17: 'dog', 18: 'horse', 19: 'sheep', 20: 'cow',
+    21: 'elephant', 22: 'bear', 23: 'zebra', 24: 'giraffe', 25: 'backpack', 26: 'umbrella', 27: 'handbag',
+    28: 'tie', 29: 'suitcase', 30: 'frisbee', 31: 'skis', 32: 'snowboard', 33: 'sports ball', 34: 'kite',
+    35: 'baseball bat', 36: 'baseball glove', 37: 'skateboard', 38: 'surfboard', 39: 'tennis racket',
+    40: 'bottle', 41: 'wine glass', 42: 'cup', 43: 'fork', 44: 'knife', 45: 'spoon', 46: 'bowl', 47: 'banana',
+    48: 'apple', 49: 'sandwich', 50: 'orange', 51: 'broccoli', 52: 'carrot', 53: 'hot dog', 54: 'pizza',
+    55: 'donut', 56: 'cake', 57: 'chair', 58: 'couch', 59: 'potted plant', 60: 'bed', 61: 'dining table',
+    62: 'toilet', 63: 'tv', 64: 'laptop', 65: 'mouse', 66: 'remote', 67: 'keyboard', 68: 'cell phone',
+    69: 'microwave', 70: 'oven', 71: 'toaster', 72: 'sink', 73: 'refrigerator', 74: 'book', 75: 'clock',
+    76: 'vase', 77: 'scissors', 78: 'teddy bear', 79: 'hair drier', 80: 'toothbrush'
 }
 
 #faz o parse do argv (os argumentos que vao para a shell)
@@ -54,9 +51,7 @@ def parse(argv):
                         help="input video file")
 
     parser.add_argument("--ssd", dest="ssd", action="store_true")
-
     parser.add_argument("--det2", dest="det2", action="store_true")
-
     parser.add_argument("--yolo", dest="yolo", action="store_true")
 
     parser.add_argument('--c1x', type=int, help='X-coordinate of the first point', default=0, action="store")
@@ -69,6 +64,8 @@ def parse(argv):
     return parser.parse_args(argv)
 
 def check_crossed_line(centroid, line_coords):
+    global DENTRO, FORA
+
     x, y = centroid.last_pos()
 
     # Line equation: y = mx + b
@@ -82,11 +79,20 @@ def check_crossed_line(centroid, line_coords):
     direction = y - np.mean(ys)
 
     if (direction < -5) and (y < expected_y):
-        print(centroid.id_centroid, " Saiu!")
+        if centroid.inside:
+            centroid.inside = False
+            FORA+=1
+            print(centroid.id_centroid, " Saiu!")
+            print("Dentro: ", DENTRO, "Fora: ", FORA, "Total: ", DENTRO - FORA)
+    elif (y > expected_y):
+        if (direction > 5) and not centroid.inside:
+            DENTRO+=1
+            print(centroid.id_centroid, " Entrou!")
+            print("Dentro: ", DENTRO, "Fora: ", FORA, "Total: ", DENTRO - FORA)
+            centroid.inside = True
+        elif (direction < -5) and not centroid.inside:
+            centroid.inside = True
 
-    elif (direction > 5) and (y > expected_y) and not centroid.inside:
-        print(centroid.id_centroid, " Entrou!")
-        centroid.inside = True
 
 def draw_bboxes(frame, c_tracker, ids, confidences, boxes, line_coords):
     global COUNTER
@@ -103,14 +109,14 @@ def draw_bboxes(frame, c_tracker, ids, confidences, boxes, line_coords):
 
         # Check if the centroid crosses the line from top to bottom
         check_crossed_line(centroid, line_coords)
-
         frame = centroid.draw(frame)
 
     return frame
 
 def execute_detection(videopath, detection_function, c1, c2):
+    global DENTRO, FORA
     cap = cv2.VideoCapture(videopath)
-    c_tracker = CentroidTracker(max_norma=30)
+    c_tracker = CentroidTracker(max_norma=40)
     count, start_time = 0, time.time()
     while cap.isOpened():
         ret, frame = cap.read()
@@ -191,7 +197,7 @@ def main(argv=None):
     real_path = os.path.realpath(video_file)
 
     c1 = (args.c1x, args.c1y) if args.c1x is not None and args.c1y is not None else (0, 170)
-    c2 = (args.c2x, args.c2y) if args.c2x is not None and args.c2y is not None else (400, 170)
+    c2 = (args.c2x, args.c2y) if args.c2x is not None and args.c2y is not None else (500, 170)
 
     confidence = args.confidence
 
@@ -207,6 +213,5 @@ def main(argv=None):
     return 0
 
 # python main.py --modelo --confianca --p1x 0 --p1y 0 --p2x 100 --p2y 100
-#0=tudo ok 1=erro
 returncode = main()
 sys.exit(returncode)
