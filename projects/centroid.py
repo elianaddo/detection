@@ -1,6 +1,6 @@
+from math import sqrt
 import cv2
 import time
-from math import sqrt
 
 class Centroid:
     def __init__(self, id_centroid):
