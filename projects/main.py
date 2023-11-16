@@ -53,10 +53,10 @@ def parse(argv):
     parser.add_argument("--det2", dest="det2", action="store_true")
     parser.add_argument("--yolo", dest="yolo", action="store_true")
 
-    parser.add_argument('--c1x', type=int, help='X-coordinate of the first point', default=0, action="store")
-    parser.add_argument('--c1y', type=int, help='Y-coordinate of the first point', default=170, action="store")
-    parser.add_argument('--c2x', type=int, help='X-coordinate of the second point', default=500, action="store")
-    parser.add_argument('--c2y', type=int, help='Y-coordinate of the second point', default=170, action="store")
+    parser.add_argument('--c1x', type=float, help='X-coordinate of the first point (percentage)', default=0.0, action="store")
+    parser.add_argument('--c1y', type=float, help='Y-coordinate of the first point (percentage)', default=60.0, action="store")
+    parser.add_argument('--c2x', type=float, help='X-coordinate of the second point (percentage)', default=100.0, action="store")
+    parser.add_argument('--c2y', type=float, help='Y-coordinate of the second point (percentage)', default=60.0, action="store")
 
     parser.add_argument('--confidence', type=float, help='Confidence threshold', default=0.4, action="store")
 
@@ -79,6 +79,12 @@ def draw_bboxes(frame, ids, confidences, boxes):
 def execute_detection(videopath, detection_function, c1, c2, norma):
     DENTRO, FORA = 0, 0
     cap = cv2.VideoCapture(videopath)
+    frame_width = int(cap.get(3))  # Get the width of the frame
+    frame_height = int(cap.get(4))  # Get the height of the frame
+    c1 = (float(c1[0]), float(c1[1]))
+    c2 = (float(c2[0]), float(c2[1]))
+    c1 = (int(c1[0] * frame_width / 100), int(c1[1] * frame_height / 100))
+    c2 = (int(c2[0] * frame_width / 100), int(c2[1] * frame_height / 100))
     c_tracker = CentroidTracker(max_norma=norma)
     count, start_time = 0, time.time()
     while cap.isOpened():
@@ -117,7 +123,6 @@ def _execDet2(videopath, c1, c2, confidence, norma):
 def _execSSDMobile(videopath, c1, c2, confidence, norma):
     CFG1["confidence"] = confidence
     execute_detection(videopath, ssd_dboxes, c1, c2, norma)
-
 
 def yoloApi(model, frame, count, confidence):
     [height, width, _] = frame.shape
@@ -170,8 +175,8 @@ def main(argv=None):
 
     real_path = os.path.realpath(video_file)
 
-    c1 = (args.c1x, args.c1y) if args.c1x is not None and args.c1y is not None else (0, 170)
-    c2 = (args.c2x, args.c2y) if args.c2x is not None and args.c2y is not None else (500, 170)
+    c1 = (args.c1x, args.c1y)
+    c2 = (args.c2x, args.c2y)
 
     confidence = args.confidence
     norma = args.norma
