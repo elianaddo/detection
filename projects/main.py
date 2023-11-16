@@ -15,12 +15,11 @@ import argparse
 from det2_api import drawboundingboxes as det2_dboxes, CFG as CFG2
 from ssd_mobilenet.api import drawboundingboxes as ssd_dboxes, CFG as CFG1
 #from yolov8.api import hello as yolohello
-from centroid import Centroid, CentroidTracker
+from centroid import Centroid, CentroidTracker, CrossedLine
 import time
 
 #variavel global para mudar o intervalo de espera por frame
 TIME_WAIT_KEY = 10
-MAX_NORMA = 30
 COUNTER = 0
 DENTRO = 0
 FORA = 0
@@ -61,69 +60,43 @@ def parse(argv):
 
     parser.add_argument('--confidence', type=float, help='Confidence threshold', default=0.4, action="store")
 
+    parser.add_argument('--norma', type=int, help='Confidence threshold', default=30, action="store")
+
     return parser.parse_args(argv)
 
-def check_crossed_line(centroid, line_coords):
-    global DENTRO, FORA
 
-    x, y = centroid.last_pos()
-
-    # Line equation: y = mx + b
-    m = (line_coords[3] - line_coords[1]) / (line_coords[2] - line_coords[0])
-    b = line_coords[1] - m * line_coords[0]
-
-    # Calculate the expected y-coordinate on the line for the current centroid x-coordinate
-    expected_y = m * x + b
-
-    ys = [c[1] for c in centroid.centerPoints]
-    direction = y - np.mean(ys)
-
-    if (direction < -5) and (y < expected_y):
-        if centroid.inside:
-            centroid.inside = False
-            FORA+=1
-            print(centroid.id_centroid, " Saiu!")
-            print("Dentro: ", DENTRO, "Fora: ", FORA, "Total: ", DENTRO - FORA)
-    elif (y > expected_y):
-        if (direction > 5) and not centroid.inside:
-            DENTRO+=1
-            print(centroid.id_centroid, " Entrou!")
-            print("Dentro: ", DENTRO, "Fora: ", FORA, "Total: ", DENTRO - FORA)
-            centroid.inside = True
-        elif (direction < -5) and not centroid.inside:
-            centroid.inside = True
-
-
-def draw_bboxes(frame, c_tracker, ids, confidences, boxes, line_coords):
+def draw_bboxes(frame, ids, confidences, boxes):
     global COUNTER
     for id_, confidence, bbox in zip(ids, confidences, boxes):
         if id_ != "person":
-            cv2.imshow('window-name', frame)
             continue
-        # print("draw_bboxes", id_, confidence, bbox)
         xi, yi, xf, yf = map(int, bbox)
         p1, p2 = (xi, yi), (xf, yf)
         frame = cv2.rectangle(frame, p1, p2, (255, 0, 0), 4)
-        x, y = (int(xf - ((xf - xi) / 2)), int(yf - ((yf - yi) / 2)))
-        centroid = c_tracker.update(x, y)
-
-        # Check if the centroid crosses the line from top to bottom
-        check_crossed_line(centroid, line_coords)
-        frame = centroid.draw(frame)
-
     return frame
 
-def execute_detection(videopath, detection_function, c1, c2):
-    global DENTRO, FORA
+
+def execute_detection(videopath, detection_function, c1, c2, norma):
+    DENTRO, FORA = 0, 0
     cap = cv2.VideoCapture(videopath)
-    c_tracker = CentroidTracker(max_norma=40)
+    c_tracker = CentroidTracker(max_norma=norma)
     count, start_time = 0, time.time()
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
         ids, confidences, boxes = detection_function(frame, count)
-        frame = draw_bboxes(frame, c_tracker, ids, confidences, boxes, (c1[0], c1[1], c2[0], c2[1]))
+        centroids = c_tracker.update(boxes)
+        draw_bboxes(frame, ids, confidences, boxes)
+        for centroid in centroids:
+            centroid.draw(frame)
+            ans = centroid.check_crossed_line((c1[0], c1[1], c2[0], c2[1]))
+            if ans == CrossedLine.ENTERED:
+                DENTRO+=1
+                print("Dentro: ", DENTRO, "Fora: ", FORA, "Total: ", DENTRO - FORA)
+            elif ans == CrossedLine.LEAVING:
+                FORA+=1
+                print("Dentro: ", DENTRO, "Fora: ", FORA, "Total: ", DENTRO - FORA)
         count += 1
         if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q') or cap.get(cv2.CAP_PROP_POS_FRAMES) == cap.get(cv2.CAP_PROP_FRAME_COUNT):
             break
@@ -134,16 +107,17 @@ def execute_detection(videopath, detection_function, c1, c2):
     cap.release()
     cv2.destroyAllWindows()
 
-def _execDet2(videopath, c1, c2, confidence):
+def _execDet2(videopath, c1, c2, confidence, norma):
     CFG2["confidence"] = confidence
     def ddet2_dboxes_wrapper(frame, count):
         ids, confidences, boxes = det2_dboxes(frame, count)
         return map(lambda id: CLASSES[id + 1], ids), confidences, boxes
-    execute_detection(videopath, ddet2_dboxes_wrapper, c1, c2)
+    execute_detection(videopath, ddet2_dboxes_wrapper, c1, c2, norma)
 
-def _execSSDMobile(videopath, c1, c2, confidence):
+def _execSSDMobile(videopath, c1, c2, confidence, norma):
     CFG1["confidence"] = confidence
-    execute_detection(videopath, ssd_dboxes, c1, c2)
+    execute_detection(videopath, ssd_dboxes, c1, c2, norma)
+
 
 def yoloApi(model, frame, count, confidence):
     [height, width, _] = frame.shape
@@ -172,9 +146,9 @@ def yoloApi(model, frame, count, confidence):
             class_ids.append(maxClassIndex)
     return class_ids, scores, boxes
 
-def _execYolo(videopath, c1, c2, confidence):
+def _execYolo(videopath, c1, c2, confidence, norma):
     model: cv2.dnn.Net = cv2.dnn.readNetFromONNX('yolov8n.onnx')
-    execute_detection(videopath, lambda frame, count: yoloApi(model, frame, count, confidence), c1, c2)
+    execute_detection(videopath, lambda frame, count: yoloApi(model, frame, count, confidence), c1, c2, norma)
 
 def limite(frame, c1, c2):
     cv2.line(frame ,c1, c2, (255, 255, 0), 2)
@@ -200,18 +174,19 @@ def main(argv=None):
     c2 = (args.c2x, args.c2y) if args.c2x is not None and args.c2y is not None else (500, 170)
 
     confidence = args.confidence
+    norma = args.norma
 
     if args.ssd:
-        _execSSDMobile(real_path, c1, c2, confidence)
+        _execSSDMobile(real_path, c1, c2, confidence, norma)
 
     if args.det2:
-        _execDet2(real_path, c1, c2, confidence)
+        _execDet2(real_path, c1, c2, confidence, norma)
 
     if args.yolo:
-        _execYolo(real_path, c1, c2, confidence)
+        _execYolo(real_path, c1, c2, confidence, norma)
 
     return 0
 
-# python main.py --modelo --confianca --p1x 0 --p1y 0 --p2x 100 --p2y 100
+# python main.py --modelo --confianca -norma(em % de pixeis) --p1x 0 --p1y 0 --p2x 100 --p2y 100
 returncode = main()
 sys.exit(returncode)
