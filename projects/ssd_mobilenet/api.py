@@ -90,6 +90,9 @@ def drawboundingboxes(frame, totalFrames):
 
             ids.append(CLASSES[idx])
             confid.append(confidence)
-            boxes.append(box)
+            dx = (endX - startX)/2
+            dy = (endY - startY)/2
+            boxes.append((startX - dx, startY - dy, endX - dx, endY - dy))
+
 
     return ids, confid, boxes
