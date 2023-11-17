@@ -80,17 +80,17 @@ class CentroidTracker:
             return True
         return False
 
+
     def update(self, boxes):
+        # Remove inactive centroids
+        current_time = time.time()
+        to_remove = [id_ for id_, centroid in self.centroids.items() if current_time - centroid.last_update_time > self.max_inactive_time]
+        for id_ in to_remove:
+            del self.centroids[id_]
+
         for box in boxes:
             xi, yi, xf, yf = map(int, box)
             x, y = (int(xf - ((xf - xi) / 2)), int(yf - ((yf - yi) / 2)))
-
-            current_time = time.time()
-
-            # Remove inactive centroids
-            to_remove = [id_ for id_, centroid in self.centroids.items() if current_time - centroid.last_update_time > self.max_inactive_time]
-            for id_ in to_remove:
-                del self.centroids[id_]
             found = False
             for id_, centroid in self.centroids.items():
                 if self.within_valid_range((x, y), centroid.last_pos()):
