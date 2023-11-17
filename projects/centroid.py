@@ -81,7 +81,6 @@ class CentroidTracker:
         return False
 
     def update(self, boxes):
-        centroids = []
         for box in boxes:
             xi, yi, xf, yf = map(int, box)
             x, y = (int(xf - ((xf - xi) / 2)), int(yf - ((yf - yi) / 2)))
@@ -96,7 +95,6 @@ class CentroidTracker:
             for id_, centroid in self.centroids.items():
                 if self.within_valid_range((x, y), centroid.last_pos()):
                     centroid.update(x, y)
-                    centroids.append(centroid)
                     found = True
                     break
 
@@ -105,5 +103,4 @@ class CentroidTracker:
                 aux.update(x, y)
                 self.centroids[self.id_counter] = aux
                 self.id_counter += 1
-                centroids.append(aux)
-        return centroids
+        return self.centroids.values()
