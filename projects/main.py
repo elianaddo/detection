@@ -45,7 +45,7 @@ def parse(argv):
 
     parser.add_argument('--confidence', type=float, help='Confidence threshold', default=0.4, action="store")
 
-    parser.add_argument('--norma', type=int, help='Confidence threshold', default=30, action="store")
+    parser.add_argument('--norma', type=float, help='Confidence threshold', default=18.0, action="store")
 
     return parser.parse_args(argv)
 
@@ -68,7 +68,7 @@ def execute_detection(videopath, detection_function, c1, c2, norma):
     c2 = (float(c2[0]), float(c2[1]))
     c1 = (int(c1[0] * frame_width / 100), int(c1[1] * frame_height / 100))
     c2 = (int(c2[0] * frame_width / 100), int(c2[1] * frame_height / 100))
-    c_tracker = CentroidTracker(max_norma=norma)
+    c_tracker = CentroidTracker(max_norma=(norma / 100) * min(frame_width, frame_height))
     count, start_time = 0, time.time()
     while cap.isOpened():
         ret, frame = cap.read()
