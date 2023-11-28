@@ -11,15 +11,15 @@ class CrossedLine(Enum):
 
 
 class Centroid:
-    def __init__(self, id_centroid):
+    def __init__(self, id_centroid, nFrame):
         self.centerPoints = []
         self.id_centroid = id_centroid
-        self.last_update_time = time.time()
+        self.last_update_frame = nFrame
         self.inside = False
 
-    def update(self, x, y):
+    def update(self, x, y, nFrame):
         self.centerPoints.append((x, y))
-        self.last_update_time = time.time()
+        self.last_update_frame = nFrame
 
     def last_pos(self):
         return self.centerPoints[-1]
@@ -64,10 +64,12 @@ class Centroid:
         return CrossedLine.WAITING
 
 class CentroidTracker:
-    def __init__(self, max_norma=30, max_inactive_time=2):
+
+    def __init__(self, max_norma=30, max_inactive_frames=20):
+        self.countFrames = 0
         self.centroids = {} #dicionário p guardar centroids
         self.max_norma = max_norma
-        self.max_inactive_time = max_inactive_time
+        self.max_inactive_frames = max_inactive_frames
         self.id_counter = 0
 
     def within_valid_range(self, c1, c2):
@@ -83,8 +85,8 @@ class CentroidTracker:
 
     def update(self, boxes):
         # Remove inactive centroids
-        current_time = time.time()
-        to_remove = [id_ for id_, centroid in self.centroids.items() if current_time - centroid.last_update_time > self.max_inactive_time]
+        self.countFrames+=1
+        to_remove = [id_ for id_, centroid in self.centroids.items() if self.countFrames - centroid.last_update_frame> self.max_inactive_frames]
         for id_ in to_remove:
             del self.centroids[id_]
 
@@ -94,13 +96,13 @@ class CentroidTracker:
             found = False
             for id_, centroid in self.centroids.items():
                 if self.within_valid_range((x, y), centroid.last_pos()):
-                    centroid.update(x, y)
+                    centroid.update(x, y, self.countFrames)
                     found = True
                     break
 
             if not found:
-                aux = Centroid(self.id_counter)
-                aux.update(x, y)
+                aux = Centroid(self.id_counter, self.countFrames)
+                aux.update(x, y, self.countFrames)
                 self.centroids[self.id_counter] = aux
                 self.id_counter += 1
         return self.centroids.values()
