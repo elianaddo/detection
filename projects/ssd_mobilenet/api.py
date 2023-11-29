@@ -44,10 +44,13 @@ def drawboundingboxes(frame, totalFrames):
     frame = imutils.resize(frame, width = 500)
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
+
     # if the frame dimensions are empty, set them
     if W is None or H is None:
         (H, W) = frame.shape[:2]
 
+    # length = max((H, W))
+    # scale = length / 500
     # check to see if we should run a more computationally expensive
     # object detection method to aid our tracker
     if totalFrames % NUM_SKIP_FRAMES != 0:
@@ -85,14 +88,27 @@ def drawboundingboxes(frame, totalFrames):
             # compute the (x, y)-coordinates of the bounding box
             # for the object
             # BOXXX
+
             box = detections[0, 0, i, 3:7] * np.array([W, H, W, H])
-            (startX, startY, endX, endY) = box.astype("int")
+
+            box = [
+                box[0] - (0.5 * box[2]),
+                box[1] - (0.5 * box[3]),
+                box[2],
+                box[3]
+            ]
+
+            (startX, startY, endX, endY) = box
+
+            n_box = [
+                round(startX),
+                round(startY),
+                round((startX + endX)),
+                round((startY + endY))
+            ]
 
             ids.append(CLASSES[idx])
             confid.append(confidence)
-            dx = (endX - startX)/2
-            dy = (endY - startY)/2
-            boxes.append((startX - dx, startY - dy, endX - dx, endY - dy))
-
+            boxes.append(n_box)
 
     return ids, confid, boxes

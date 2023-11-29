@@ -97,7 +97,6 @@ def execute_detection(videopath, detection_function, c1, c2, norma):
     cap.release()
     cv2.destroyAllWindows()
 
-
 def _execDet2(videopath, c1, c2, confidence, norma):
     CFG2["confidence"] = confidence
     execute_detection(videopath, det2_dboxes, c1, c2, norma)

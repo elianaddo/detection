@@ -9,7 +9,6 @@ class CrossedLine(Enum):
     ENTERED = 2
     LEAVING = 3
 
-
 class Centroid:
     def __init__(self, id_centroid, nFrame):
         self.centerPoints = []
@@ -81,7 +80,6 @@ class CentroidTracker:
         if norma <= self.max_norma:
             return True
         return False
-
 
     def update(self, boxes):
         # Remove inactive centroids
