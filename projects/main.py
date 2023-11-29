@@ -14,6 +14,7 @@ import cv2
 import argparse
 from det2_api import drawboundingboxes as det2_dboxes, CFG as CFG2
 from ssd_mobilenet.api import drawboundingboxes as ssd_dboxes, CFG as CFG1
+from yolo_api import yoloApi
 #from yolov8.api import hello as yolohello
 from centroid import Centroid, CentroidTracker, CrossedLine
 import time
@@ -23,7 +24,6 @@ TIME_WAIT_KEY = 10
 COUNTER = 0
 DENTRO = 0
 FORA = 0
-
 
 #faz o parse do argv (os argumentos que vao para a shell)
 def parse(argv):
@@ -45,7 +45,7 @@ def parse(argv):
 
     parser.add_argument('--confidence', type=float, help='Confidence threshold', default=0.4, action="store")
 
-    parser.add_argument('--norma', type=float, help='Confidence threshold', default=18.0, action="store")
+    parser.add_argument('--norma', type=float, help='Confidence threshold', default=4.0, action="store")
 
     return parser.parse_args(argv)
 
@@ -56,8 +56,8 @@ def draw_bboxes(frame, ids, confidences, boxes):
         xi, yi, xf, yf = map(int, bbox)
         p1, p2 = (xi, yi), (xf, yf)
         frame = cv2.rectangle(frame, p1, p2, (255, 0, 0), 4)
+        print(bbox)
     return frame
-
 
 def execute_detection(videopath, detection_function, c1, c2, norma):
     DENTRO, FORA = 0, 0
@@ -91,6 +91,7 @@ def execute_detection(videopath, detection_function, c1, c2, norma):
             break
         frame = limite(frame, c1, c2)
         cv2.imshow('window-name', frame)
+
         # print(count / (time.time() - start_time))
     print(f"Exec time: {time.time() - start_time} seconds")
     cap.release()
@@ -104,33 +105,6 @@ def _execDet2(videopath, c1, c2, confidence, norma):
 def _execSSDMobile(videopath, c1, c2, confidence, norma):
     CFG1["confidence"] = confidence
     execute_detection(videopath, ssd_dboxes, c1, c2, norma)
-
-def yoloApi(model, frame, count, confidence):
-    [height, width, _] = frame.shape
-    length = max((height, width))
-    image = np.zeros((length, length, 3), np.uint8)
-    image[0:height, 0:width] = frame
-    scale = length / 640
-    blob = cv2.dnn.blobFromImage(image, scalefactor=1 / 255, size=(640, 640), swapRB=True)
-    model.setInput(blob)
-    outputs = model.forward()
-    outputs = np.array([cv2.transpose(outputs[0])])
-    rows = outputs.shape[1]
-    boxes = []
-    scores = []
-    class_ids = []
-
-    for i in range(rows):
-        classes_scores = outputs[0][i][4:]
-        (minScore, maxScore, minClassLoc, (x, maxClassIndex)) = cv2.minMaxLoc(classes_scores)
-        if maxScore >= confidence:
-            box = [
-                outputs[0][i][0] - (0.5 * outputs[0][i][2]), outputs[0][i][1] - (0.5 * outputs[0][i][3]),
-                outputs[0][i][2], outputs[0][i][3]]
-            boxes.append(box)
-            scores.append(maxScore)
-            class_ids.append(maxClassIndex)
-    return class_ids, scores, boxes
 
 def _execYolo(videopath, c1, c2, confidence, norma):
     model: cv2.dnn.Net = cv2.dnn.readNetFromONNX('yolov8n.onnx')
