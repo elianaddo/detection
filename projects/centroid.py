@@ -36,8 +36,11 @@ class Centroid:
             prev = next
         return newFrame
 
-    def check_crossed_line(self, line_coords):
+    def check_crossed_line(self, line_coords, r):
         x, y = self.last_pos()
+        rx = r[0]
+        ry = r[1]
+
         # Line equation: y = mx + b
         m = (line_coords[3] - line_coords[1]) / (line_coords[2] - line_coords[0])
         b = line_coords[1] - m * line_coords[0]
@@ -45,21 +48,18 @@ class Centroid:
         # Calculate the expected y-coordinate on the line for the current centroid x-coordinate
         expected_y = m * x + b
 
-        ys = [c[1] for c in self.centerPoints[1:]]
-        direction = y - np.mean(ys)
+        d = 1 if ry > expected_y else -1
 
-        if (direction < -5) and (y < expected_y):
-            if self.inside:
-                self.inside = False
+        ys = [c[1] for c in self.centerPoints[1:]]
+        direction = (y - np.mean(ys)) * d
+        if (direction < -5):
+            if (y > expected_y):
                 print(self.id_centroid, " Saiu!")
                 return CrossedLine.LEAVING
-        elif (y > expected_y):
-            if (direction > 5) and not self.inside:
+        elif (direction > 5):
+            if (y < expected_y):
                 print(self.id_centroid, " Entrou!")
-                self.inside = True
                 return CrossedLine.ENTERED
-            elif (direction < -5) and not self.inside:
-                self.inside = True
         return CrossedLine.WAITING
 
 class CentroidTracker:
@@ -76,7 +76,6 @@ class CentroidTracker:
         c2x, c2y = c2
         # cacula a norma
         norma = sqrt(((c2x - c1x) ** 2) + ((c2y - c1y) ** 2))
-        # print("Norma: ", norma)
         if norma <= self.max_norma:
             return True
         return False
