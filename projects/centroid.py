@@ -52,15 +52,25 @@ class Centroid:
 
         ys = [c[1] for c in self.centerPoints[1:]]
         direction = (y - np.mean(ys)) * d
+        ret = CrossedLine.WAITING
         if (direction < -5):
-            if (y > expected_y):
+            if (self.inside and ry < expected_y and y > expected_y):
                 print(self.id_centroid, " Saiu!")
-                return CrossedLine.LEAVING
+                ret = CrossedLine.LEAVING
+            elif (self.inside and ry > expected_y and y < expected_y):
+                print(self.id_centroid, " Saiu!")
+                ret = CrossedLine.LEAVING
         elif (direction > 5):
-            if (y < expected_y):
+            if (not self.inside and ry < expected_y and y < expected_y):
                 print(self.id_centroid, " Entrou!")
-                return CrossedLine.ENTERED
-        return CrossedLine.WAITING
+                ret = CrossedLine.ENTERED
+            elif (not self.inside and ry > expected_y and y > expected_y):
+                print(self.id_centroid, " Entrou!")
+                ret = CrossedLine.ENTERED
+        self.inside = (
+                (ry < expected_y and y < expected_y) or
+                (ry > expected_y and y > expected_y))
+        return ret
 
 class CentroidTracker:
 
