@@ -82,32 +82,39 @@ Confidence and norma:
 
 If you wish to integrate another model into the project, follow these steps:
 
-  1. Clone this repository.
-  2. Add the project of the new model to the `projects` folder.
-  3. Create an 'api.py' for your new model. That 'api.py' must be able to run a video frame by frame and it needs to return the following values:
-     - Confidence
-     - Bounding Boxes  
-     - Class ids
-       
-4. Create a function in the main class for your new model with the following structure:
+1. Clone this repository.
+2. Add the project of the new model to the `projects` folder.
+3. Create an 'api.py' for your new model. That 'api.py' must be able to run a video frame by frame and it needs to return the following values:
+   - Confidence
+   - Bounding box
+   - Class ids
+     
+     
+    ```python
+    def drawboundingboxes(frame, totalFrames):   
+        # your code goes here 
+        return ids, confid, boxes
+    ``` 
+    
+5. Create a function in the main class for your new model with the following structure:
 
     ``` python
     def _execNewModel(videopath, c1, c2, r, confidence, norma):
     CFG["confidence"] = confidence
     execute_detection(videopath, det2_dboxes, c1, c2, r, norma)      
     ``` 
-5. Add a new flag in the parse function to invoke your model.
+6. Add a new flag in the parse function to invoke your model.
    ```python
    parser.add_argument("--newModel", dest="newModel", action="store_true")
    ```
 
-6. Update the 'main' function to handle this new flag.
+7. Update the 'main' function to handle this new flag.
     ```python
     if args.newModel:
         _execNewModel(real_path, c1, c2, r, confidence, norma)
     ```
 
-7. Place the video you want to test in the `projects` folder and run the program with the flags you want:
+8. Place the video you want to test in the `projects` folder and run the program with the flags you want:
     ```
     python main.py --input test_1.mp4 --newModel --confidence 0.4 
     ```  
