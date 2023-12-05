@@ -9,17 +9,26 @@
 ## Setup
 
 1. Clone this repository:
-    ```
+    ```bash
     https://github.com/elianaddo/detection.git
     ```
 
 ## Project Structure 
 
-Within the `projects` folder, you have three pre-trained models ready for use in person detection: YOLOv8, MobileNet, and Detectron2.
+The project is organized as follows:
+
+- 📂 **projects**: Contains pre-trained models for person detection.
+  - 📂 **mobilenet**: MobileNet model project.
+  - 📂 **yolov8**: YOLOv8 model project.
+  - 📂 **detectron2**: Detectron2 model project.
+
+- 📄 **main.py**: Main script for running the detection application.
+- 📄 **centroid.py**: Module containing the Centroid and CentroidTracker classes.
+- 📄 **api.py**: APIs for different models to retrieve confidence, bounding boxes, and class ids.
 
 ## Usage
 
-```
+```bash
 usage: main.py [-h] [-i INPUT] [--ssd] [--det2] [--yolo] [--c1x C1X]
                [--c1y C1Y] [--c2x C2X] [--c2y C2Y] [--confidence CONFIDENCE]
                [--norma NORMA] [--Rx RX] [--Ry RY]
@@ -39,7 +48,7 @@ options:
 
   --confidence          Confidence of the model (default: 0.4)
 
-  --norma NORMA         Maximum distance between centroids
+  --norma               Maximum distance between centroids
 
   --Rx RX               X-coordinate of the entry point (percentage) (default: 0.0)
   --Ry RY               Y-coordinate of the entry point (percentage) (default: 0.0)
@@ -72,9 +81,9 @@ Confidence and norma:
 
 ## Running
 
-1. Place the video you want to test in the `projects` folder and run the program with the desired flags. 
+Place the video you want to test in the `projects` folder and run the program with the desired flags. 
 
-   ```
+   ```bash
     python main.py --input test_1.mp4 --mbl --confidence 0.4 --norma 12 --c1x 0 --c1y 60 --c2x 200 --c2y 0 --Rx 600 --Ry 600 
    ```  
 
@@ -89,32 +98,43 @@ If you wish to integrate another model into the project, follow these steps:
    - Bounding box
    - Class ids
      
-     
+
     ```python
+    CFG = {"confidence" : 0.5}
+    
     def drawboundingboxes(frame, totalFrames):   
         # your code goes here 
         return ids, confid, boxes
     ``` 
     
-5. Create a function in the main class for your new model with the following structure:
+4. Create a function in the main class for your new model with the following structure:
 
     ``` python
     def _execNewModel(videopath, c1, c2, r, confidence, norma):
     CFG["confidence"] = confidence
     execute_detection(videopath, det2_dboxes, c1, c2, r, norma)      
-    ``` 
+    ```
+5. Import the function and the dictionary in the main class:
+   
+    ```python
+    from newModel.api import drawboundingboxes as newModel_boxes, CFG as newModel_CFG
+    ```
+    
 6. Add a new flag in the parse function to invoke your model.
+   
    ```python
    parser.add_argument("--newModel", dest="newModel", action="store_true")
    ```
 
 7. Update the 'main' function to handle this new flag.
+    
     ```python
     if args.newModel:
         _execNewModel(real_path, c1, c2, r, confidence, norma)
     ```
 
 8. Place the video you want to test in the `projects` folder and run the program with the flags you want:
+    
     ```
     python main.py --input test_1.mp4 --newModel --confidence 0.4 
     ```  
