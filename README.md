@@ -19,12 +19,14 @@ The project is organized as follows:
 
 - 📂 **projects**: Contains pre-trained models for person detection.
   - 📂 **mobilenet**: MobileNet model project.
+      - 📄 **mobileNet_api.py**: API for mobileNet to retrieve confidence, bounding boxes, and class ids.
   - 📂 **yolov8**: YOLOv8 model project.
+      - 📄 **yolov8_api.py**: API for Yolov8 to retrieve confidence, bounding boxes, and class ids.       
   - 📂 **detectron2**: Detectron2 model project.
+      - 📄 **detectron2_api.py**: API for detectron2 to retrieve confidence, bounding boxes, and class ids.
 
-- 📄 **main.py**: Main script for running the detection application.
-- 📄 **centroid.py**: Module containing the Centroid and CentroidTracker classes.
-- 📄 **api.py**: APIs for different models to retrieve confidence, bounding boxes, and class ids.
+  - 📄 **main.py**: Main script for running the detection application.
+  - 📄 **centroid.py**: Module containing the Centroid and CentroidTracker classes.
 
 ## Usage
 
