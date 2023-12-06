@@ -131,6 +131,7 @@ def people_counter():
 		if args["input"] is not None and frame is None:
 			break
 
+		time.sleep(0.1)
 		# resize the frame to have a maximum width of 500 pixels (the
 		# less data we have, the faster we can process it), then convert
 		# the frame from BGR to RGB for dlib
@@ -193,6 +194,7 @@ def people_counter():
 					# compute the (x, y)-coordinates of the bounding box
 					# for the object
 					#BOXXX
+
 					box = detections[0, 0, i, 3:7] * np.array([W, H, W, H])
 					(startX, startY, endX, endY) = box.astype("int")
 
@@ -206,11 +208,11 @@ def people_counter():
 					tracker = dlib.correlation_tracker()
 					rect = dlib.rectangle(startX, startY, endX, endY)
 					tracker.start_track(rgb, rect)
-
 					# add the tracker to our list of trackers so we can
 					# utilize it during skip frames
 					trackers.append(tracker)
-			print(ids, confid, boxes)
+
+
 
 		# otherwise, we should utilize our object *trackers* rather than
 		# object *detectors* to obtain a higher frame processing throughput
@@ -231,6 +233,7 @@ def people_counter():
 				endX = int(pos.right())
 				endY = int(pos.bottom())
 
+				cv2.rectangle(frame, (startX, startY), (endX, endY), (255, 255, 255), 2)
 				# add the bounding box coordinates to the rectangles list
 				rects.append((startX, startY, endX, endY))
 
@@ -310,6 +313,8 @@ def people_counter():
 			cv2.putText(frame, text, (centroid[0] - 10, centroid[1] - 10),
 				cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 			cv2.circle(frame, (centroid[0], centroid[1]), 4, (255, 255, 255), -1)
+
+
 
 		# construct a tuple of information we will be displaying on the frame
 		info_status = [

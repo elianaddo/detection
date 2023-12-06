@@ -11,15 +11,15 @@ class CrossedLine(Enum):
 
 
 class Centroid:
-    def __init__(self, id_centroid):
+    def __init__(self, id_centroid, nFrame):
         self.centerPoints = []
         self.id_centroid = id_centroid
-        self.last_update_time = time.time()
+        self.last_update_frame = nFrame
         self.inside = False
 
-    def update(self, x, y):
+    def update(self, x, y, nFrame):
         self.centerPoints.append((x, y))
-        self.last_update_time = time.time()
+        self.last_update_frame = nFrame
 
     def last_pos(self):
         return self.centerPoints[-1]
@@ -37,8 +37,12 @@ class Centroid:
             prev = next
         return newFrame
 
-    def check_crossed_line(self, line_coords):
+    def check_crossed_line(self, line_coords, r):
         x, y = self.last_pos()
+        rx = r[0]
+        ry = r[1]
+
+
         # Line equation: y = mx + b
         m = (line_coords[3] - line_coords[1]) / (line_coords[2] - line_coords[0])
         b = line_coords[1] - m * line_coords[0]
@@ -46,28 +50,37 @@ class Centroid:
         # Calculate the expected y-coordinate on the line for the current centroid x-coordinate
         expected_y = m * x + b
 
-        ys = [c[1] for c in self.centerPoints[1:]]
-        direction = y - np.mean(ys)
+        d = 1 if ry > expected_y else -1
 
-        if (direction < -5) and (y < expected_y):
-            if self.inside:
-                self.inside = False
+        ys = [c[1] for c in self.centerPoints[1:]]
+        direction = (y - np.mean(ys)) * d
+        ret = CrossedLine.WAITING
+        if (direction < -5):
+            if (self.inside and ry < expected_y and y > expected_y):
                 print(self.id_centroid, " Saiu!")
-                return CrossedLine.LEAVING
-        elif (y > expected_y):
-            if (direction > 5) and not self.inside:
+                ret = CrossedLine.LEAVING
+            elif (self.inside and ry > expected_y and y < expected_y):
+                print(self.id_centroid, " Saiu!")
+                ret = CrossedLine.LEAVING
+        elif (direction > 5):
+            if (not self.inside and ry < expected_y and y < expected_y):
                 print(self.id_centroid, " Entrou!")
-                self.inside = True
-                return CrossedLine.ENTERED
-            elif (direction < -5) and not self.inside:
-                self.inside = True
-        return CrossedLine.WAITING
+                ret = CrossedLine.ENTERED
+            elif (not self.inside and ry > expected_y and y > expected_y):
+                print(self.id_centroid, " Entrou!")
+                ret = CrossedLine.ENTERED
+        self.inside = (
+                (ry < expected_y and y < expected_y) or
+                (ry > expected_y and y > expected_y))
+        return ret
 
 class CentroidTracker:
-    def __init__(self, max_norma=30, max_inactive_time=2):
+
+    def __init__(self, max_norma=30, max_inactive_frames=20):
+        self.countFrames = 0
         self.centroids = {} #dicionário p guardar centroids
         self.max_norma = max_norma
-        self.max_inactive_time = max_inactive_time
+        self.max_inactive_frames = max_inactive_frames
         self.id_counter = 0
 
     def within_valid_range(self, c1, c2):
@@ -75,16 +88,14 @@ class CentroidTracker:
         c2x, c2y = c2
         # cacula a norma
         norma = sqrt(((c2x - c1x) ** 2) + ((c2y - c1y) ** 2))
-        # print("Norma: ", norma)
         if norma <= self.max_norma:
             return True
         return False
 
-
     def update(self, boxes):
         # Remove inactive centroids
-        current_time = time.time()
-        to_remove = [id_ for id_, centroid in self.centroids.items() if current_time - centroid.last_update_time > self.max_inactive_time]
+        self.countFrames+=1
+        to_remove = [id_ for id_, centroid in self.centroids.items() if self.countFrames - centroid.last_update_frame> self.max_inactive_frames]
         for id_ in to_remove:
             del self.centroids[id_]
 
@@ -94,13 +105,15 @@ class CentroidTracker:
             found = False
             for id_, centroid in self.centroids.items():
                 if self.within_valid_range((x, y), centroid.last_pos()):
-                    centroid.update(x, y)
+                    centroid.update(x, y, self.countFrames)
+
                     found = True
                     break
 
             if not found:
-                aux = Centroid(self.id_counter)
-                aux.update(x, y)
+
+                aux = Centroid(self.id_counter, self.countFrames)
+                aux.update(x, y, self.countFrames)
                 self.centroids[self.id_counter] = aux
                 self.id_counter += 1
         return self.centroids.values()
