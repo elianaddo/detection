@@ -9,6 +9,7 @@ class CrossedLine(Enum):
     ENTERED = 2
     LEAVING = 3
 
+
 class Centroid:
     def __init__(self, id_centroid, nFrame):
         self.centerPoints = []
@@ -40,6 +41,7 @@ class Centroid:
         x, y = self.last_pos()
         rx = r[0]
         ry = r[1]
+
 
         # Line equation: y = mx + b
         m = (line_coords[3] - line_coords[1]) / (line_coords[2] - line_coords[0])
@@ -104,10 +106,12 @@ class CentroidTracker:
             for id_, centroid in self.centroids.items():
                 if self.within_valid_range((x, y), centroid.last_pos()):
                     centroid.update(x, y, self.countFrames)
+
                     found = True
                     break
 
             if not found:
+
                 aux = Centroid(self.id_counter, self.countFrames)
                 aux.update(x, y, self.countFrames)
                 self.centroids[self.id_counter] = aux

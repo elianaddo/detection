@@ -137,12 +137,14 @@ def main(argv=None):
     c1 = (args.c1x, args.c1y)
     c2 = (args.c2x, args.c2y)
 
+
     r = (args.Rx, args.Ry)
 
     confidence = args.confidence
     norma = args.norma
 
     if args.ssd:
+
         _execSSDMobile(real_path, c1, c2, r, confidence, norma)
 
     if args.det2:
@@ -150,6 +152,7 @@ def main(argv=None):
 
     if args.yolo:
         _execYolo(real_path, c1, c2, r, confidence, norma)
+
 
     return 0
 

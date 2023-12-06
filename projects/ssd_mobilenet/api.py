@@ -91,4 +91,5 @@ def drawboundingboxes(frame, totalFrames):
             confid.append(model_confidence)
             boxes.append(box)
 
+
     return ids, confid, boxes
