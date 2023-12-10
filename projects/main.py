@@ -12,7 +12,6 @@ sys.path.insert(1, str(det2_dir))
 
 import cv2
 import argparse
-from det2_api import drawboundingboxes as det2_dboxes, CFG as CFG2
 from ssd_mobilenet.api import drawboundingboxes as ssd_dboxes, CFG as CFG1
 from yolo_api import yoloApi
 #from yolov8.api import hello as yolohello
@@ -25,7 +24,7 @@ COUNTER = 0
 DENTRO = 0
 FORA = 0
 
-#faz o parse do argv (os argumentos que vao para a shell)
+#faz o parse do argv (os argumentos que vao para a shell)"--webcam"
 def parse(argv):
     parser = argparse.ArgumentParser(
         prog="main.py",
@@ -33,6 +32,8 @@ def parse(argv):
     )
     parser.add_argument("-i", "--input", dest="input", action="store", type=str,
                         help="input video file")
+
+    parser.add_argument("-w", "--webcam", dest="webcam", action="store_true", help="use webcam as input")
 
     parser.add_argument("--ssd", dest="ssd", action="store_true")
     parser.add_argument("--det2", dest="det2", action="store_true")
@@ -63,11 +64,11 @@ def draw_bboxes(frame, ids, confidences, boxes):
         # print(bbox)
     return frame
 
-def execute_detection(videopath, detection_function, c1, c2, r, norma):
+def execute_detection(vs, detection_function, c1, c2, r, norma):
     DENTRO, FORA = 0, 0
-    cap = cv2.VideoCapture(videopath)
-    frame_width = int(cap.get(3))  # Get the width of the frame
-    frame_height = int(cap.get(4))  # Get the height of the frame
+    # vs = cv2.VideoCapture(vs)
+    frame_width = int(vs.get(3))  # Get the width of the frame
+    frame_height = int(vs.get(4))  # Get the height of the frame
     c1 = (float(c1[0]), float(c1[1]))
     c2 = (float(c2[0]), float(c2[1]))
     c1 = (int(c1[0] * frame_width / 100), int(c1[1] * frame_height / 100))
@@ -75,8 +76,8 @@ def execute_detection(videopath, detection_function, c1, c2, r, norma):
     r = (int(r[0] * frame_width / 100), int(r[1] * frame_height / 100))
     c_tracker = CentroidTracker(max_norma=(norma / 100) * min(frame_width, frame_height))
     count, start_time = 0, time.time()
-    while cap.isOpened():
-        ret, frame = cap.read()
+    while True:
+        ret, frame = vs.read()
         if not ret:
             break
         ids, confidences, boxes = detection_function(frame, count)
@@ -92,17 +93,18 @@ def execute_detection(videopath, detection_function, c1, c2, r, norma):
                 FORA+=1
                 print("Dentro: ", DENTRO, "Fora: ", FORA, "Total: ", DENTRO - FORA)
         count += 1
-        if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q') or cap.get(cv2.CAP_PROP_POS_FRAMES) == cap.get(cv2.CAP_PROP_FRAME_COUNT):
+        if cv2.waitKey(TIME_WAIT_KEY) & 0xFF == ord('q'): #or vs.get(cv2.CAP_PROP_POS_FRAMES) == vs.get(cv2.CAP_PROP_FRAME_COUNT):
             break
         frame = limite(frame, c1, c2)
         cv2.imshow('window-name', frame)
 
         # print(count / (time.time() - start_time))
     print(f"Exec time: {time.time() - start_time} seconds")
-    cap.release()
+    vs.release()
     cv2.destroyAllWindows()
 
 def _execDet2(videopath, c1, c2, r, confidence, norma):
+    from det2_api import drawboundingboxes as det2_dboxes, CFG as CFG2
     CFG2["confidence"] = confidence
     execute_detection(videopath, det2_dboxes, c1, c2, r, norma)
 
@@ -125,18 +127,21 @@ def main(argv=None):
     args = parse(argv)
     video_file = args.input
 
-    if video_file is None:
-        print(f"Please specify a file with --input")
-        return 1
-    if not os.path.exists(video_file):
-        print("file does not exist")
+    if video_file:
+        if not os.path.exists(video_file):
+            print("file does not exist")
+            return 1
+        real_path = os.path.realpath(video_file)
+        vs = cv2.VideoCapture(real_path)
+    elif args.webcam:
+        vs = cv2.VideoCapture(0)
+    else:
+        print("Webcam not found")
         return 1
 
-    real_path = os.path.realpath(video_file)
 
     c1 = (args.c1x, args.c1y)
     c2 = (args.c2x, args.c2y)
-
 
     r = (args.Rx, args.Ry)
 
@@ -144,15 +149,13 @@ def main(argv=None):
     norma = args.norma
 
     if args.ssd:
-
-        _execSSDMobile(real_path, c1, c2, r, confidence, norma)
+        _execSSDMobile(vs, c1, c2, r, confidence, norma)
 
     if args.det2:
-        _execDet2(real_path, c1, c2, r, confidence, norma)
+        _execDet2(vs, c1, c2, r, confidence, norma)
 
     if args.yolo:
-        _execYolo(real_path, c1, c2, r, confidence, norma)
-
+        _execYolo(vs, c1, c2, r, confidence, norma)
 
     return 0
 
