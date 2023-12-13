@@ -32,8 +32,8 @@ def parse(argv):
     )
     parser.add_argument("-i", "--input", dest="input", action="store", type=str,
                         help="input video file")
-
-    parser.add_argument("-w", "--webcam", dest="webcam", action="store_true", help="use webcam as input")
+    parser.add_argument("-w", "--webcam", dest="webcam", action="store", type=int, default=0,
+                        help="use webcam as input. Specify the webcam index.")
 
     parser.add_argument("--ssd", dest="ssd", action="store_true")
     parser.add_argument("--det2", dest="det2", action="store_true")
@@ -133,8 +133,9 @@ def main(argv=None):
             return 1
         real_path = os.path.realpath(video_file)
         vs = cv2.VideoCapture(real_path)
-    elif args.webcam:
-        vs = cv2.VideoCapture(0)
+
+    if args.webcam is not None:
+        vs = cv2.VideoCapture(args.webcam)
     else:
         print("Webcam not found")
         return 1
