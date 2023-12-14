@@ -32,8 +32,9 @@ def parse(argv):
     )
     parser.add_argument("-i", "--input", dest="input", action="store", type=str,
                         help="input video file")
-    parser.add_argument("-w", "--webcam", dest="webcam", action="store", type=int, default=0,
+    parser.add_argument("-w", "--webcam", dest="webcam", nargs='?', const=0, type=int, default=None,
                         help="use webcam as input. Specify the webcam index.")
+    parser.add_argument('--ipcam', type=str, help='IP address of the IP camera', default=None, action="store")
 
     parser.add_argument("--ssd", dest="ssd", action="store_true")
     parser.add_argument("--det2", dest="det2", action="store_true")
@@ -135,11 +136,28 @@ def main(argv=None):
         vs = cv2.VideoCapture(real_path)
 
     if args.webcam is not None:
-        vs = cv2.VideoCapture(args.webcam)
+        if args.webcam == "":
+            print("Error: Please provide a valid webcam index or use --ipcam to specify an IP camera.")
+            sys.exit(1)
+        else:
+            # Usar o índice fornecido
+            try:
+                webcam_index = int(args.webcam)
+                vs = cv2.VideoCapture(webcam_index)
+            except ValueError:
+                print("Invalid webcam index. Please provide a valid integer or use --ipcam to specify an IP camera.")
+                sys.exit(1)
+
+    elif args.ipcam is not None:
+            # Usar a câmera IP
+            try:
+                vs = cv2.VideoCapture(args.ipcam)
+            except Exception as e:
+                print(f"Error opening IP camera: {e}")
+                sys.exit(1)
     else:
         print("Webcam not found")
-        return 1
-
+        sys.exit(1)
 
     c1 = (args.c1x, args.c1y)
     c2 = (args.c2x, args.c2y)
