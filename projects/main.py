@@ -2,6 +2,7 @@ import os
 import sys
 import pathlib
 import numpy as np
+import glob
 
 script = pathlib.Path(__file__).resolve()
 project_dir = script.parent.absolute()
@@ -24,6 +25,17 @@ COUNTER = 0
 DENTRO = 0
 FORA = 0
 
+dev_path = "/sys/class/video4linux/video?/name"
+class ListCamerasAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        msg = "Please provide webcam index: \n"
+        for camera in glob.glob(dev_path):
+            i = camera.find("video", 20)
+            video = camera[i:i+6]
+            camera_name = read_camera(camera)
+            msg+=f"{video} {camera_name} \n"
+        print(msg)
+
 #faz o parse do argv (os argumentos que vao para a shell)"--webcam"
 def parse(argv):
     parser = argparse.ArgumentParser(
@@ -32,8 +44,10 @@ def parse(argv):
     )
     parser.add_argument("-i", "--input", dest="input", action="store", type=str,
                         help="input video file")
-    parser.add_argument("-w", "--webcam", dest="webcam", nargs='?', const=0, type=int, default=None,
+    parser.add_argument("-w", "--webcam", dest="webcam", default=None, type=int, metavar='ARG',
                         help="use webcam as input. Specify the webcam index.")
+    parser.add_argument('--listWebcams', action=ListCamerasAction, nargs=0,
+                        help='List available cameras.')
     parser.add_argument('--ipcam', type=str, help='IP address of the IP camera', default=None, action="store")
 
     parser.add_argument("--ssd", dest="ssd", action="store_true")
@@ -54,7 +68,6 @@ def parse(argv):
     parser.add_argument('--Ry', type=float, help='Y-coordinate of the entry point (percentage)', default=0.0, action="store")
 
     return parser.parse_args(argv)
-
 
 def draw_bboxes(frame, ids, confidences, boxes):
     global COUNTER
@@ -121,6 +134,10 @@ def limite(frame, c1, c2):
     cv2.line(frame ,c1, c2, (255, 255, 0), 2)
     return frame
 
+def read_camera(cam):
+    with open(cam, "r") as f:
+        return f.readline().rstrip()
+
 # verifica se o video é passado - verifca na shell
 def main(argv=None):
     if argv is None:
@@ -135,18 +152,13 @@ def main(argv=None):
         real_path = os.path.realpath(video_file)
         vs = cv2.VideoCapture(real_path)
 
-    if args.webcam is not None:
-        if args.webcam == "":
-            print("Error: Please provide a valid webcam index or use --ipcam to specify an IP camera.")
+    elif args.webcam is not None:
+        try:
+            webcam_index = int(args.webcam)
+            vs = cv2.VideoCapture(webcam_index)
+        except ValueError:
+            print("Invalid webcam index. Please provide a valid integer or use --ipcam to specify an IP camera.")
             sys.exit(1)
-        else:
-            # Usar o índice fornecido
-            try:
-                webcam_index = int(args.webcam)
-                vs = cv2.VideoCapture(webcam_index)
-            except ValueError:
-                print("Invalid webcam index. Please provide a valid integer or use --ipcam to specify an IP camera.")
-                sys.exit(1)
 
     elif args.ipcam is not None:
             # Usar a câmera IP
@@ -156,8 +168,8 @@ def main(argv=None):
                 print(f"Error opening IP camera: {e}")
                 sys.exit(1)
     else:
-        print("Webcam not found")
-        sys.exit(1)
+        return 0
+
 
     c1 = (args.c1x, args.c1y)
     c2 = (args.c2x, args.c2y)
